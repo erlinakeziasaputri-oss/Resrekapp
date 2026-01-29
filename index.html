@@ -168,6 +168,8 @@
             LogOut: (p) => <IconBridge name="LogOut" {...p} />,
             Key: (p) => <IconBridge name="KeyRound" {...p} />,
             Alert: (p) => <IconBridge name="AlertTriangle" {...p} />,
+            Ticket: (p) => <IconBridge name="Ticket" {...p} />,
+            Search: (p) => <IconBridge name="Search" {...p} />,
         };
 
         const { useState, useEffect, useRef } = React;
@@ -199,6 +201,66 @@
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
             });
+        };
+
+        const generateToken = () => {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous chars
+            let token = '';
+            for (let i = 0; i < 6; i++) {
+                token += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return token;
+        };
+
+        const downloadTokenCard = (event, participant, token) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 350;
+            const ctx = canvas.getContext('2d');
+
+            // Background Gradient
+            const grd = ctx.createLinearGradient(0, 0, 600, 350);
+            grd.addColorStop(0, "#4f46e5");
+            grd.addColorStop(1, "#312e81");
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, 600, 350);
+
+            // Pattern Overlay (Simple Circles)
+            ctx.fillStyle = "rgba(255,255,255,0.05)";
+            ctx.beginPath(); ctx.arc(500, -50, 150, 0, 2 * Math.PI); ctx.fill();
+            ctx.beginPath(); ctx.arc(50, 400, 120, 0, 2 * Math.PI); ctx.fill();
+
+            // Text
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 24px sans-serif";
+            ctx.fillText("TOKEN AKSES NILAI", 40, 50);
+
+            ctx.font = "16px sans-serif";
+            ctx.fillStyle = "rgba(255,255,255,0.8)";
+            ctx.fillText(event.name, 40, 80);
+
+            // Participant Box
+            ctx.fillStyle = "rgba(255,255,255,0.1)";
+            ctx.fillRect(40, 110, 520, 100);
+            
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 32px sans-serif";
+            ctx.fillText(participant.name, 60, 160);
+            ctx.font = "18px sans-serif";
+            ctx.fillText(`Nomor Undian: ${participant.number}`, 60, 190);
+
+            // Token Display
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 60px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(token, 300, 290);
+            ctx.font = "14px sans-serif";
+            ctx.fillText("Gunakan token ini untuk masuk", 300, 320);
+
+            const link = document.createElement('a');
+            link.download = `Token_${participant.name.replace(/\s+/g, '_')}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
         };
 
         // --- PDF GENERATOR ---
@@ -243,10 +305,7 @@
             const [val, setVal] = useState(defaultValue);
             const inputRef = useRef(null);
             useEffect(() => { if (isOpen) { setVal(defaultValue); setTimeout(() => { if (inputRef.current) inputRef.current.focus(); }, 50); } }, [isOpen, defaultValue]);
-            
-            // Auto detect password type based on title content (e.g. "Password", "PIN")
             const isPassword = title ? (title.toLowerCase().includes("password") || title.toLowerCase().includes("pin")) : false;
-            
             if(!isOpen) return null;
             return ( <ModalWrapper isOpen={isOpen} onClose={onCancel}> <div className="p-8"> <div className="flex justify-between items-center mb-6"> <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">{title}</h3> <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 transition-colors"><Icons.X size={20}/></button> </div> {type === 'confirm' ? ( <p className="text-slate-600 mb-8 text-lg leading-relaxed">{message}</p> ) : ( <div className="mb-8"> <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Input Data</label> <input ref={inputRef} type={isPassword ? "password" : "text"} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium text-slate-800" placeholder={placeholder} value={val} onChange={e=>setVal(e.target.value)} onKeyDown={e => e.key === 'Enter' && onConfirm(val)} /> </div> )} <div className="flex justify-end gap-3"> <button onClick={onCancel} className="px-6 py-3 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-all">Batal</button> <button onClick={() => onConfirm(type==='input'?val:true)} className={`px-8 py-3 rounded-xl shadow-lg transition-all font-bold text-white ${type === 'confirm' ? 'bg-red-500 hover:bg-red-600 shadow-red-100' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'}`}> {type === 'confirm' ? 'Hapus' : 'Lanjutkan'} </button> </div> </div> </ModalWrapper> );
         };
@@ -254,37 +313,122 @@
         const SidebarLink = ({ active, icon, label, onClick }) => ( <button onClick={onClick} className={`w-full flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 font-semibold group ${active ? 'bg-white text-indigo-700 shadow-md' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}> <span className={`${active ? 'text-indigo-600' : 'group-hover:text-indigo-400'} transition-colors`}>{icon}</span> <span className="tracking-tight text-sm">{label}</span> </button> );
 
         // --- AUTH COMPONENTS ---
-        const LoginView = ({ users, onLogin, dbStatus }) => {
+        const LoginView = ({ users, onLogin, onTokenCheck, dbStatus }) => {
+            const [mode, setMode] = useState('admin'); // admin | participant
             const [username, setUsername] = useState('');
             const [password, setPassword] = useState('');
+            const [token, setToken] = useState('');
             const [error, setError] = useState('');
+            const [checking, setChecking] = useState(false);
 
-            const handleSubmit = (e) => {
+            const handleAdminLogin = (e) => {
                 e.preventDefault();
                 const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
                 if (user) onLogin(user); else setError('Username atau password salah');
             };
 
+            const handleTokenCheck = async (e) => {
+                e.preventDefault();
+                if(!token) return setError("Masukkan token akses.");
+                setChecking(true);
+                setError('');
+                const result = await onTokenCheck(token.toUpperCase());
+                setChecking(false);
+                if (!result) setError("Token tidak ditemukan atau tidak valid.");
+            };
+
             return (
                 <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
-                    <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-md border border-slate-200">
-                        <div className="text-center mb-10">
-                            <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center font-black text-4xl text-white shadow-xl shadow-indigo-200 mx-auto mb-6">R</div>
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">ResRekap Pro</h1>
-                            <p className="text-slate-500 font-medium mt-2">Professional Online System</p>
-                            {dbStatus === 'error' && <div className="mt-4 p-3 bg-red-50 text-red-600 text-xs rounded-xl border border-red-100 flex items-center gap-2 text-left"><Icons.Alert size={16} className="shrink-0"/> Database belum terhubung. Edit kode dan isi firebaseConfig.</div>}
+                    <div className="bg-white p-8 rounded-[40px] shadow-2xl w-full max-w-md border border-slate-200">
+                        <div className="text-center mb-8">
+                            <div className="w-16 h-16 bg-indigo-600 rounded-3xl flex items-center justify-center font-black text-3xl text-white shadow-xl shadow-indigo-200 mx-auto mb-4">R</div>
+                            <h1 className="text-2xl font-black text-slate-900 tracking-tight">ResRekap Pro</h1>
+                            <p className="text-slate-500 font-medium text-sm mt-1">Professional Online System</p>
+                            {dbStatus === 'error' && <div className="mt-4 p-3 bg-red-50 text-red-600 text-xs rounded-xl border border-red-100 flex items-center gap-2 text-left"><Icons.Alert size={16} className="shrink-0"/> Database tidak terhubung.</div>}
                         </div>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div><label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Username</label><div className="relative"><div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><Icons.Users size={18}/></div><input autoFocus type="text" className="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-800" placeholder="Username" value={username} onChange={e=>setUsername(e.target.value)}/></div></div>
-                            <div><label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label><div className="relative"><div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><Icons.Key size={18}/></div><input type="password" className="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-800" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/></div></div>
-                            {error && <p className="text-red-500 text-sm font-bold text-center bg-red-50 p-3 rounded-xl">{error}</p>}
-                            <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all transform hover:scale-[1.02]">Masuk Aplikasi</button>
-                        </form>
+
+                        <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+                            <button onClick={()=>{setMode('admin'); setError('');}} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode==='admin' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Admin</button>
+                            <button onClick={()=>{setMode('participant'); setError('');}} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${mode==='participant' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Cek Nilai</button>
+                        </div>
+
+                        {mode === 'admin' ? (
+                            <form onSubmit={handleAdminLogin} className="space-y-5">
+                                <div><label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Username</label><div className="relative"><div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><Icons.Users size={18}/></div><input autoFocus type="text" className="w-full pl-12 p-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-800" placeholder="Username" value={username} onChange={e=>setUsername(e.target.value)}/></div></div>
+                                <div><label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label><div className="relative"><div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><Icons.Key size={18}/></div><input type="password" className="w-full pl-12 p-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-800" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/></div></div>
+                                {error && <p className="text-red-500 text-xs font-bold text-center bg-red-50 p-2 rounded-xl">{error}</p>}
+                                <button type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all transform hover:scale-[1.02]">Masuk Aplikasi</button>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleTokenCheck} className="space-y-5">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Token Peserta</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><Icons.Ticket size={18}/></div>
+                                        <input autoFocus type="text" className="w-full pl-12 p-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-black text-slate-800 uppercase tracking-widest" placeholder="X7Y2Z1" value={token} onChange={e=>setToken(e.target.value.toUpperCase())} maxLength={6}/>
+                                    </div>
+                                </div>
+                                {error && <p className="text-red-500 text-xs font-bold text-center bg-red-50 p-2 rounded-xl">{error}</p>}
+                                <button type="submit" disabled={checking} className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2">
+                                    {checking ? <Icons.Loader className="animate-spin" size={18}/> : <><Icons.Search size={18}/> Cek Hasil Saya</>}
+                                </button>
+                            </form>
+                        )}
                     </div>
                 </div>
             );
         };
 
+        const ParticipantView = ({ session, onLogout }) => {
+            const { event, participant } = session;
+            return (
+                <div className="min-h-screen bg-slate-50 p-6 font-sans">
+                    <div className="max-w-3xl mx-auto bg-white rounded-[40px] shadow-xl overflow-hidden border border-slate-100">
+                        <div className="bg-indigo-600 p-8 text-white relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-10 -mt-10"></div>
+                            <h4 className="text-xs font-bold uppercase tracking-widest opacity-80 mb-2">Laporan Hasil Individu</h4>
+                            <h1 className="text-3xl font-black mb-1">{participant.name}</h1>
+                            <p className="font-medium opacity-90">Nomor Undian: {participant.number}</p>
+                            <div className="mt-6 flex items-center gap-3 text-sm bg-white/20 w-fit px-4 py-2 rounded-xl backdrop-blur-sm">
+                                <Icons.Trophy size={16}/> <span>Event: {event.name}</span>
+                            </div>
+                        </div>
+                        
+                        <div className="p-8">
+                            <div className="grid gap-6">
+                                {event.categories.map(cat => (
+                                    <div key={cat.id} className="bg-slate-50 rounded-2xl border border-slate-100 p-6">
+                                        <div className="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
+                                            <h3 className="font-bold text-slate-700">{cat.name}</h3>
+                                            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-bold">Total: {getCategoryTotal(participant, cat).toFixed(2)}</span>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {cat.aspects.map(asp => (
+                                                <div key={asp.id} className="flex justify-between text-sm">
+                                                    <span className="text-slate-500">{asp.name}</span>
+                                                    <span className="font-mono font-bold text-slate-800">{getAspectScore(participant, cat.id, asp.id, cat.judgeCount).toFixed(2)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center">
+                                <div>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Total Akumulasi</p>
+                                    <p className="text-4xl font-black text-indigo-600">{getCustomTotal(participant, event.categories).toFixed(2)}</p>
+                                </div>
+                                <button onClick={onLogout} className="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold hover:bg-slate-200 transition-all">Keluar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p className="text-center text-[10px] text-slate-400 mt-8 uppercase tracking-widest font-bold">Powered by ResRekap Pro</p>
+                </div>
+            );
+        };
+
+        // --- ACCOUNT MANAGER ---
         const AccountManagerView = ({ users, addUser, deleteUser }) => (
             <div className="animate-fade-in max-w-4xl mx-auto pb-20">
                 <header className="mb-10"><h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Manajemen Akun</h1><p className="text-slate-500 font-medium mt-2 text-sm">Kelola akses pengguna aplikasi (Online Sync).</p></header>
@@ -297,8 +441,9 @@
 
         // --- MAIN APP ---
         const ResRekapApp = () => {
-            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [viewMode, setViewMode] = useState('login'); // login | admin | participant
             const [currentUser, setCurrentUser] = useState(null);
+            const [participantSession, setParticipantSession] = useState(null);
             
             // STATE DATA (Synced via Firestore)
             const [users, setUsers] = useState([]);
@@ -306,7 +451,7 @@
             const [savedSheets, setSavedSheets] = useState([]);
             const [settings, setSettings] = useState({ organizerName: "Panitia Pelaksana", appLogo: null });
             
-            const [dbStatus, setDbStatus] = useState('connecting'); // connecting, connected, error
+            const [dbStatus, setDbStatus] = useState('connecting');
             const [tab, setTab] = useState('dashboard');
             const [modal, setModal] = useState({ open: false });
             const [isFullscreen, setIsFullscreen] = useState(false);
@@ -317,82 +462,57 @@
             // --- FIREBASE LISTENERS ---
             useEffect(() => {
                 if (!db) { setDbStatus('error'); return; }
-
-                // 1. LISTEN TO EVENTS
-                const unsubEvents = db.collection('events').onSnapshot(snapshot => {
-                    const loadedEvents = snapshot.docs.map(doc => doc.data());
-                    setEvents(loadedEvents);
-                    setDbStatus('connected');
-                }, err => { console.error("Events Sync Error", err); setDbStatus('error'); });
-
-                // 2. LISTEN TO USERS
+                const unsubEvents = db.collection('events').onSnapshot(snapshot => { setEvents(snapshot.docs.map(doc => doc.data())); setDbStatus('connected'); }, () => setDbStatus('error'));
                 const unsubUsers = db.collection('users').onSnapshot(snapshot => {
                     const loadedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    if (loadedUsers.length === 0) {
-                        // Create Default User if empty
-                        const defUser = { username: 'Respati', password: '007' };
-                        db.collection('users').add(defUser);
-                    } else {
-                        setUsers(loadedUsers);
-                    }
+                    if (loadedUsers.length === 0) db.collection('users').add({ username: 'Respati', password: '007' });
+                    else setUsers(loadedUsers);
                 });
-
-                // 3. LISTEN TO SAVED SHEETS
-                const unsubSheets = db.collection('saved_sheets').onSnapshot(snapshot => {
-                    const loadedSheets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    setSavedSheets(loadedSheets);
-                });
-
-                // 4. LISTEN TO SETTINGS
-                const unsubSettings = db.collection('meta').doc('settings').onSnapshot(doc => {
-                    if (doc.exists) setSettings(doc.data());
-                    else db.collection('meta').doc('settings').set({ organizerName: "Panitia Pelaksana", appLogo: null });
-                });
-
+                const unsubSheets = db.collection('saved_sheets').onSnapshot(snapshot => setSavedSheets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+                const unsubSettings = db.collection('meta').doc('settings').onSnapshot(doc => { if (doc.exists) setSettings(doc.data()); else db.collection('meta').doc('settings').set({ organizerName: "Panitia Pelaksana", appLogo: null }); });
                 return () => { unsubEvents(); unsubUsers(); unsubSheets(); unsubSettings(); };
             }, []);
 
             // --- FIRESTORE HELPERS ---
             const saveEvent = (eventData) => db.collection('events').doc(eventData.id).set(eventData);
             const deleteEvent = (eventId) => db.collection('events').doc(eventId).delete();
-            
             const saveSheet = (sheetData) => db.collection('saved_sheets').add(sheetData);
             const deleteSheet = (sheetId) => db.collection('saved_sheets').doc(sheetId).delete();
-
             const saveSettings = (newSettings) => db.collection('meta').doc('settings').set(newSettings);
-
             const addNewUser = (username, password) => db.collection('users').add({ username, password });
             const removeUser = (userId) => db.collection('users').doc(userId).delete();
 
             // --- UI HANDLERS ---
-            const triggerModal = (title, type, cb, msg, ph, defVal = '') => {
-                setModal({ open: true, title, type, message: msg, placeholder: ph, defaultValue: defVal, onConfirm: (v) => { setModal(prev => ({ ...prev, open: false })); setTimeout(() => cb(v), 150); }, onCancel: () => setModal(prev => ({ ...prev, open: false })) });
-            };
-
+            const triggerModal = (title, type, cb, msg, ph, defVal = '') => { setModal({ open: true, title, type, message: msg, placeholder: ph, defaultValue: defVal, onConfirm: (v) => { setModal(prev => ({ ...prev, open: false })); setTimeout(() => cb(v), 150); }, onCancel: () => setModal(prev => ({ ...prev, open: false })) }); };
             const toggleFullscreen = () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(console.error); } else { document.exitFullscreen().then(() => setIsFullscreen(false)); } };
             const handleDownloadPDF = (data, filename) => { setPdfData(data); setIsGeneratingPdf(true); setTimeout(() => { generatePDF('pdf-content', filename, () => { setIsGeneratingPdf(false); setPdfData(null); }); }, 1500); };
             const handlePreviewPDF = (data) => setPreviewData(data);
-            const handleLogin = (user) => { setCurrentUser(user); setIsLoggedIn(true); };
-            const handleLogout = () => { setIsLoggedIn(false); setCurrentUser(null); };
+            
+            const handleLogin = (user) => { setCurrentUser(user); setViewMode('admin'); };
+            const handleLogout = () => { setViewMode('login'); setCurrentUser(null); setParticipantSession(null); };
 
-            const handleAddUser = () => {
-                triggerModal("Tambah Pengguna Baru", "input", (username) => {
-                    if(!username) return alert("Username wajib diisi");
-                    if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) return alert("Username sudah ada");
-                    triggerModal("Set Password", "input", (password) => {
-                        if(!password) return alert("Password wajib diisi");
-                        addNewUser(username, password);
-                    }, null, "Password user...");
-                }, null, "Username baru...");
+            const checkToken = async (tokenInput) => {
+                // Cari di semua event
+                const snapshot = await db.collection('events').get();
+                const allEvents = snapshot.docs.map(doc => doc.data());
+                
+                for (const ev of allEvents) {
+                    const found = ev.participants.find(p => p.token === tokenInput);
+                    if (found) {
+                        setParticipantSession({ event: ev, participant: found });
+                        setViewMode('participant');
+                        return true;
+                    }
+                }
+                return false;
             };
 
-            const handleDeleteUser = (userToDelete) => {
-                if(users.length <= 1) return alert("Tidak bisa menghapus user terakhir.");
-                triggerModal("Hapus User?", "confirm", () => { removeUser(userToDelete.id); }, `Hapus akses untuk ${userToDelete.username}?`);
-            };
+            const handleAddUser = () => { triggerModal("Tambah Pengguna Baru", "input", (username) => { if(!username) return alert("Wajib diisi"); if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) return alert("Sudah ada"); triggerModal("Set Password", "input", (password) => { if(!password) return alert("Wajib diisi"); addNewUser(username, password); }, null, "Password..."); }, null, "Username..."); };
+            const handleDeleteUser = (u) => { if(users.length <= 1) return alert("Tidak bisa menghapus user terakhir."); triggerModal("Hapus User?", "confirm", () => { removeUser(u.id); }, `Hapus akses ${u.username}?`); };
 
-            // --- RENDER ---
-            if (!isLoggedIn) return <LoginView users={users} onLogin={handleLogin} dbStatus={dbStatus} />;
+            // --- ROUTING ---
+            if (viewMode === 'login') return <LoginView users={users} onLogin={handleLogin} onTokenCheck={checkToken} dbStatus={dbStatus} />;
+            if (viewMode === 'participant' && participantSession) return <ParticipantView session={participantSession} onLogout={handleLogout} />;
 
             return (
                 <div className="flex h-screen bg-[#f8fafc] relative">
@@ -512,6 +632,19 @@
                 } else { const newCats = evt.categories.map(c => c.id === catId ? {...c, locked: true} : c); saveEvent({...evt, categories: newCats}); } 
             };
 
+            const handleReleaseToken = (p) => {
+                if(p.token) {
+                    modal("Token Akses Peserta", "confirm", () => downloadTokenCard(evt, p, p.token), `Token Aktif: ${p.token}\nKlik tombol di bawah untuk mengunduh kartu akses.`);
+                } else {
+                    const newToken = generateToken();
+                    const updatedPs = evt.participants.map(x => x.id === p.id ? {...x, token: newToken} : x);
+                    saveEvent({ ...evt, participants: updatedPs });
+                    setTimeout(() => {
+                        modal("Token Berhasil Dibuat", "confirm", () => downloadTokenCard(evt, p, newToken), `Token Baru: ${newToken}\nUnduh kartu sekarang?`);
+                    }, 500);
+                }
+            };
+
             // Fungsi Toggle Accordion
             const toggleCat = (catId) => {
                 setExpandedCats(prev => ({ ...prev, [catId]: !prev[catId] }));
@@ -544,7 +677,12 @@
                             <div className="flex items-center gap-4">
                                 <button onClick={()=>setSelectedPid(null)} className="p-2 hover:bg-slate-100 rounded-lg transition-all border border-slate-200 text-slate-500 hover:text-indigo-600"><Icons.Back size={18}/></button>
                                 <div>
-                                    <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">{p.name}</h2>
+                                    <div className="flex items-center gap-3">
+                                        <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">{p.name}</h2>
+                                        <button onClick={() => handleReleaseToken(p)} className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title={p.token ? "Lihat Token" : "Rilis Token"}>
+                                            <Icons.Key size={14}/>
+                                        </button>
+                                    </div>
                                     <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mt-1 bg-indigo-50 px-2 py-0.5 rounded w-fit">No. {p.number}</p>
                                 </div>
                             </div>
