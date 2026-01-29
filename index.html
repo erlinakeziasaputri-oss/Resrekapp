@@ -215,18 +215,10 @@
         };
 
         const generateTokenCardImage = async (event, participant, token) => {
-            // HIGH QUALITY SCALE (3x)
-            const scale = 3;
-            const width = 600 * scale;
-            const height = 350 * scale;
-
             const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = 600;
+            canvas.height = 350;
             const ctx = canvas.getContext('2d');
-            
-            // Set scaling for High DPI
-            ctx.scale(scale, scale);
 
             // Background Gradient
             const grd = ctx.createLinearGradient(0, 0, 600, 350);
@@ -242,10 +234,10 @@
 
             // Text Header
             ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 24px 'Segoe UI', sans-serif";
+            ctx.font = "bold 24px sans-serif";
             ctx.fillText("KARTU AKSES NILAI", 40, 50);
 
-            ctx.font = "16px 'Segoe UI', sans-serif";
+            ctx.font = "16px sans-serif";
             ctx.fillStyle = "rgba(255,255,255,0.8)";
             ctx.fillText(event.name, 40, 80);
 
@@ -258,7 +250,6 @@
                     const aspect = img.width / img.height;
                     const h = 60;
                     const w = h * aspect;
-                    // Draw image nicely
                     ctx.drawImage(img, 540 - w, 30, w, h);
                 } catch (e) { console.error(e); }
             }
@@ -268,24 +259,23 @@
             ctx.fillRect(40, 110, 520, 100);
             
             ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 32px 'Segoe UI', sans-serif";
-            ctx.fillText(participant.name, 60, 155);
-            ctx.font = "18px 'Segoe UI', sans-serif";
-            ctx.fillText(`ID Peserta: ${participant.number}`, 60, 185); 
+            ctx.font = "bold 32px sans-serif";
+            ctx.fillText(participant.name, 60, 160);
+            ctx.font = "18px sans-serif";
+            ctx.fillText(`ID Peserta: ${participant.number}`, 60, 190); // Ganti "Nomor Undian"
 
             // Token Display
             ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 60px 'Courier New', monospace";
+            ctx.font = "bold 60px monospace";
             ctx.textAlign = "center";
             ctx.fillText(token, 300, 290);
             
             // Footer
-            ctx.font = "italic 12px 'Segoe UI', sans-serif";
+            ctx.font = "italic 12px sans-serif";
             ctx.fillStyle = "rgba(255,255,255,0.6)";
-            ctx.textAlign = "center";
             ctx.fillText("Rekap oleh ResRekap", 300, 330);
 
-            return canvas.toDataURL('image/png', 1.0);
+            return canvas.toDataURL('image/png');
         };
 
         const downloadToken = async (event, p, token) => {
@@ -485,12 +475,8 @@
 
         const ParticipantView = ({ session, onLogout }) => {
             const { event, participant } = session;
-            // State for expansion for both main categories and custom reports
             const [expandedCats, setExpandedCats] = useState({});
-            const [expandedReports, setExpandedReports] = useState({});
-
             const toggleCat = (catId) => setExpandedCats(prev => ({ ...prev, [catId]: !prev[catId] }));
-            const toggleReport = (repId) => setExpandedReports(prev => ({ ...prev, [repId]: !prev[repId] }));
 
             return (
                 <div className="h-screen bg-slate-50 overflow-auto bg-pattern">
@@ -517,44 +503,19 @@
                                 const isExpanded = expandedCats[cat.id];
                                 return (
                                     <div key={cat.id} className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-md">
-                                        <div 
-                                            onClick={() => toggleCat(cat.id)}
-                                            className={`px-6 py-5 border-b flex justify-between items-center cursor-pointer transition-colors ${isExpanded ? 'bg-slate-50' : 'bg-white hover:bg-slate-50'}`}
-                                        >
-                                            <div className="flex items-center gap-5">
-                                                <div className={`p-2 rounded-xl bg-slate-100 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-indigo-100 text-indigo-600' : ''}`}>
-                                                    <Icons.ArrowDown size={18}/>
-                                                </div>
-                                                <h3 className="font-bold text-base text-slate-800 uppercase tracking-wide">{cat.name}</h3>
-                                            </div>
-                                            <div className="px-5 py-2 rounded-xl text-sm font-black tracking-widest uppercase bg-indigo-50 text-indigo-600 border border-indigo-100">
-                                                {getCategoryTotal(participant, cat).toFixed(2)}
-                                            </div>
+                                        <div onClick={() => toggleCat(cat.id)} className={`px-6 py-5 border-b flex justify-between items-center cursor-pointer transition-colors ${isExpanded ? 'bg-slate-50' : 'bg-white hover:bg-slate-50'}`}>
+                                            <div className="flex items-center gap-5"><div className={`p-2 rounded-xl bg-slate-100 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-indigo-100 text-indigo-600' : ''}`}><Icons.ArrowDown size={18}/></div><h3 className="font-bold text-base text-slate-800 uppercase tracking-wide">{cat.name}</h3></div>
+                                            <div className="px-5 py-2 rounded-xl text-sm font-black tracking-widest uppercase bg-indigo-50 text-indigo-600 border border-indigo-100">{getCategoryTotal(participant, cat).toFixed(2)}</div>
                                         </div>
-
                                         {isExpanded && (
                                             <div className="animate-fade-in bg-slate-50/50">
                                                 <table className="w-full text-left">
-                                                    <thead>
-                                                        <tr className="text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200">
-                                                            <th className="px-8 py-4 w-1/3">Aspek Penilaian</th>
-                                                            {Array.from({length:cat.judgeCount}).map((_,i)=><th key={i} className="px-4 py-4 text-center">Juri {i+1}</th>)}
-                                                        </tr>
-                                                    </thead>
+                                                    <thead><tr className="text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200"><th className="px-8 py-4 w-1/3">Aspek Penilaian</th>{Array.from({length:cat.judgeCount}).map((_,i)=><th key={i} className="px-4 py-4 text-center">Juri {i+1}</th>)}</tr></thead>
                                                     <tbody className="divide-y divide-slate-200">
                                                         {cat.aspects.map((asp) => (
                                                             <tr key={asp.id} className="hover:bg-white transition-colors">
-                                                                <td className="px-8 py-3 align-middle">
-                                                                    <div className="font-bold text-slate-700 text-sm leading-tight">{asp.name}</div>
-                                                                    <div className="text-[9px] text-slate-400 font-bold mt-1 bg-white border border-slate-200 px-2 py-0.5 rounded w-fit uppercase tracking-wider">Max: {asp.maxScore}</div>
-                                                                </td>
-                                                                {Array.from({length:cat.judgeCount}).map((_,i) => (
-                                                                    <td key={i} className="px-4 py-3 text-center">
-                                                                        <span className="font-black text-slate-600 text-base">
-                                                                            {participant.scores?.[cat.id]?.[asp.id]?.[i+1] || '-'}
-                                                                        </span>
-                                                                    </td>
-                                                                ))}
+                                                                <td className="px-8 py-3 align-middle"><div className="font-bold text-slate-700 text-sm leading-tight">{asp.name}</div><div className="text-[9px] text-slate-400 font-bold mt-1 bg-white border border-slate-200 px-2 py-0.5 rounded w-fit uppercase tracking-wider">Max: {asp.maxScore}</div></td>
+                                                                {Array.from({length:cat.judgeCount}).map((_,i) => (<td key={i} className="px-4 py-3 text-center"><span className="font-black text-slate-600 text-base">{participant.scores?.[cat.id]?.[asp.id]?.[i+1] || '-'}</span></td>))}
                                                             </tr>
                                                         ))}
                                                     </tbody>
@@ -572,41 +533,13 @@
                                     <div className="grid gap-4">
                                         {event.custom_reports.map(cr => {
                                             const cats = event.categories.filter(c => cr.categoryIds.includes(c.id));
-                                            const isExpanded = expandedReports[cr.id];
-                                            
                                             return (
-                                                <div key={cr.id} className="bg-indigo-50 rounded-3xl border border-indigo-100 overflow-hidden transition-all duration-300">
-                                                    <div 
-                                                        onClick={() => toggleReport(cr.id)}
-                                                        className="p-6 flex justify-between items-center cursor-pointer"
-                                                    >
-                                                        <div>
-                                                            <h4 className="font-bold text-indigo-900 text-lg flex items-center gap-2">
-                                                                {cr.name}
-                                                                <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}><Icons.ArrowDown size={16} className="text-indigo-400"/></div>
-                                                            </h4>
-                                                            <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">Gabungan {cats.length} Mata Lomba</p>
-                                                        </div>
-                                                        <div className="text-3xl font-black text-indigo-600">{getCustomTotal(participant, cats).toFixed(2)}</div>
+                                                <div key={cr.id} className="bg-indigo-50 rounded-3xl border border-indigo-100 p-6 flex justify-between items-center">
+                                                    <div>
+                                                        <h4 className="font-bold text-indigo-900 text-lg">{cr.name}</h4>
+                                                        <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">Gabungan {cats.length} Mata Lomba</p>
                                                     </div>
-
-                                                    {/* Expanded Breakdown */}
-                                                    {isExpanded && (
-                                                        <div className="bg-white/50 border-t border-indigo-100 p-4 animate-fade-in">
-                                                            <div className="space-y-2">
-                                                                {cats.map(c => (
-                                                                    <div key={c.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-indigo-50">
-                                                                        <span className="text-indigo-900 font-bold text-sm">{c.name}</span>
-                                                                        <span className="font-black text-indigo-600">{getCategoryTotal(participant, c).toFixed(2)}</span>
-                                                                    </div>
-                                                                ))}
-                                                                <div className="flex justify-between items-center px-3 pt-2">
-                                                                    <span className="text-[10px] uppercase font-black tracking-widest text-indigo-400">Total Akumulasi</span>
-                                                                    <span className="font-black text-indigo-800 text-lg">{getCustomTotal(participant, cats).toFixed(2)}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                    <div className="text-3xl font-black text-indigo-600">{getCustomTotal(participant, cats).toFixed(2)}</div>
                                                 </div>
                                             );
                                         })}
@@ -614,17 +547,12 @@
                                 </div>
                             )}
                         </div>
-                        
-                        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50">
-                            <button onClick={onLogout} className="px-10 py-4 bg-slate-900 text-white rounded-full font-bold hover:bg-indigo-600 transition-all shadow-2xl shadow-indigo-500/30 flex items-center gap-3 transform hover:scale-105">
-                                <Icons.LogOut size={18}/> Keluar Aplikasi
-                            </button>
-                        </div>
                     </div>
                 </div>
             );
         };
 
+        // --- ACCOUNT MANAGER ---
         const AccountManagerView = ({ users, addUser, deleteUser }) => (
             <div className="animate-fade-in max-w-4xl mx-auto pb-20">
                 <header className="mb-10"><h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Manajemen Akun</h1><p className="text-slate-500 font-medium mt-2 text-sm">Kelola akses pengguna aplikasi (Online Sync).</p></header>
@@ -635,23 +563,30 @@
             </div>
         );
 
+        // --- MAIN APP ---
         const ResRekapApp = () => {
-            const [viewMode, setViewMode] = useState('login'); 
+            const [viewMode, setViewMode] = useState('login'); // login | admin | participant
             const [currentUser, setCurrentUser] = useState(null);
             const [participantSession, setParticipantSession] = useState(null);
+            
+            // STATE DATA (Synced via Firestore)
             const [users, setUsers] = useState([]);
             const [events, setEvents] = useState([]);
             const [savedSheets, setSavedSheets] = useState([]);
             const [settings, setSettings] = useState({ organizerName: "Panitia Pelaksana", appLogo: null });
+            
             const [dbStatus, setDbStatus] = useState('connecting');
             const [tab, setTab] = useState('dashboard');
             const [modal, setModal] = useState({ open: false });
+            // Token Modal State
             const [tokenModal, setTokenModal] = useState({ open: false, data: null });
+            
             const [isFullscreen, setIsFullscreen] = useState(false);
             const [pdfData, setPdfData] = useState(null);
             const [previewData, setPreviewData] = useState(null); 
             const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
+            // --- FIREBASE LISTENERS ---
             useEffect(() => {
                 if (!db) { setDbStatus('error'); return; }
                 const unsubEvents = db.collection('events').onSnapshot(snapshot => { setEvents(snapshot.docs.map(doc => doc.data())); setDbStatus('connected'); }, () => setDbStatus('error'));
@@ -665,6 +600,7 @@
                 return () => { unsubEvents(); unsubUsers(); unsubSheets(); unsubSettings(); };
             }, []);
 
+            // --- FIRESTORE HELPERS ---
             const saveEvent = (eventData) => db.collection('events').doc(eventData.id).set(eventData);
             const deleteEvent = (eventId) => db.collection('events').doc(eventId).delete();
             const saveSheet = (sheetData) => db.collection('saved_sheets').add(sheetData);
@@ -673,9 +609,12 @@
             const addNewUser = (username, password) => db.collection('users').add({ username, password });
             const removeUser = (userId) => db.collection('users').doc(userId).delete();
 
+            // --- UI HANDLERS ---
             const triggerModal = (title, type, cb, msg, ph, defVal = '', confirmBtnText = null) => { 
                 setModal({ open: true, title, type, message: msg, placeholder: ph, defaultValue: defVal, confirmBtnText, onConfirm: (v) => { setModal(prev => ({ ...prev, open: false })); setTimeout(() => cb(v), 150); }, onCancel: () => setModal(prev => ({ ...prev, open: false })) }); 
             };
+            
+            // New Token Modal Trigger
             const triggerTokenModal = (event, participant, token) => {
                  setTokenModal({ open: true, data: { event, participant, token } });
             };
@@ -683,6 +622,7 @@
             const toggleFullscreen = () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(console.error); } else { document.exitFullscreen().then(() => setIsFullscreen(false)); } };
             const handleDownloadPDF = (data, filename) => { setPdfData(data); setIsGeneratingPdf(true); setTimeout(() => { generatePDF('pdf-content', filename, () => { setIsGeneratingPdf(false); setPdfData(null); }); }, 1500); };
             const handlePreviewPDF = (data) => setPreviewData(data);
+            
             const handleLogin = (user) => { setCurrentUser(user); setViewMode('admin'); };
             const handleLogout = () => { setViewMode('login'); setCurrentUser(null); setParticipantSession(null); };
 
@@ -703,6 +643,7 @@
             const handleAddUser = () => { triggerModal("Tambah Pengguna Baru", "input", (username) => { if(!username) return alert("Wajib diisi"); if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) return alert("Sudah ada"); triggerModal("Set Password", "input", (password) => { if(!password) return alert("Wajib diisi"); addNewUser(username, password); }, null, "Password..."); }, null, "Username..."); };
             const handleDeleteUser = (u) => { if(users.length <= 1) return alert("Tidak bisa menghapus user terakhir."); triggerModal("Hapus User?", "confirm", () => { removeUser(u.id); }, `Hapus akses ${u.username}?`); };
 
+            // --- ROUTING ---
             if (viewMode === 'login') return <LoginView users={users} onLogin={handleLogin} onTokenCheck={checkToken} dbStatus={dbStatus} settings={settings} />;
             if (viewMode === 'participant' && participantSession) return <ParticipantView session={participantSession} onLogout={handleLogout} />;
 
@@ -743,6 +684,335 @@
                     </main>
                 </div>
             );
+        };
+
+        const DashboardView = ({ events, setTab }) => (
+            <div className="animate-fade-in">
+                <header className="mb-12"><h1 className="text-4xl font-black text-slate-900 tracking-tight">Selamat Datang</h1><p className="text-slate-500 font-medium mt-1 text-sm">Gunakan navigasi untuk mengelola perlombaan hari ini.</p></header>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                    {[{ label: 'Event Aktif', val: events.length, color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Icons.Briefcase size={24}/> }, { label: 'Total Mata Lomba', val: events.reduce((a,b)=>a+b.categories.length,0), color: 'text-blue-600', bg: 'bg-blue-50', icon: <Icons.Trophy size={24}/> }, { label: 'Peserta Terdaftar', val: events.reduce((a,b)=>a+(b.participants?.length||0),0), color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <Icons.Users size={24}/> }].map((s, i) => (<div key={i} className="bg-white p-6 rounded-[24px] shadow-sm border border-slate-100 flex items-center gap-6 hover:shadow-xl hover:translate-y-[-2px] transition-all duration-300"><div className={`p-4 rounded-xl ${s.bg} ${s.color}`}>{s.icon}</div><div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p><h3 className="text-3xl font-black text-slate-900 mt-1">{s.val}</h3></div></div>))}
+                </div>
+                {events.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 gap-6"><button onClick={()=>setTab('recap')} className="group p-8 bg-indigo-600 text-white rounded-[32px] hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex flex-col gap-4 text-left relative overflow-hidden"><div className="absolute top-[-10px] right-[-10px] p-8 bg-white/10 rounded-full group-hover:scale-110 transition-transform opacity-30"><Icons.Recap size={100}/></div><h3 className="text-xl font-bold">Lanjutkan Rekap Nilai</h3><p className="text-indigo-100 font-medium max-w-[200px] text-sm opacity-80">Masukkan skor juri untuk peserta yang sedang tampil.</p></button><button onClick={()=>setTab('report')} className="group p-8 bg-slate-900 text-white rounded-[32px] hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 flex flex-col gap-4 text-left relative overflow-hidden"><div className="absolute top-[-10px] right-[-10px] p-8 bg-white/10 rounded-full group-hover:scale-110 transition-transform opacity-30"><Icons.Report size={100}/></div><h3 className="text-xl font-bold">Unduh Laporan</h3><p className="text-slate-400 font-medium max-w-[200px] text-sm opacity-80">Dapatkan hasil juara umum dan rekap per mata lomba.</p></button></div>) : (<div className="text-center p-20 bg-white rounded-[40px] border border-slate-100 shadow-sm border-dashed"><div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6"><Icons.Event size={28} className="text-slate-300"/></div><h3 className="text-xl font-bold text-slate-800">Mulai Buat Event Pertama</h3><p className="text-slate-400 mt-2 mb-8 max-w-xs mx-auto text-sm">Anda belum memiliki event terdaftar. Tekan tombol di bawah untuk memulai.</p><button onClick={()=>setTab('events')} className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">Buat Event Baru</button></div>)}
+            </div>
+        );
+
+        const EventSettings = ({ events, saveEvent, deleteEvent, modal }) => {
+            const [editData, setEditData] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [activeEventId, setActiveEventId] = useState(null);
+            const activeEvent = events.find(e => e.id === activeEventId);
+            const moveCategory = (catId, direction) => { const newCats = [...activeEvent.categories]; const index = newCats.findIndex(c => c.id === catId); if (index < 0) return; if (direction === 'up' && index > 0) { [newCats[index], newCats[index - 1]] = [newCats[index - 1], newCats[index]]; } else if (direction === 'down' && index < newCats.length - 1) { [newCats[index], newCats[index + 1]] = [newCats[index + 1], newCats[index]]; } saveEvent({...activeEvent, categories: newCats}); };
+            const handleLogo = async (e) => { if(e.target.files[0]) { setLoading(true); try { const resized = await resizeImage(e.target.files[0]); setEditData(prev => ({ ...prev, logo: resized })); } catch(err) { alert("Format gambar tidak didukung"); } setLoading(false); } };
+            const save = () => { if(!editData.name) return alert("Nama Event wajib diisi"); saveEvent({ ...editData, id: editData.id || generateId(), categories: editData.categories || [], participants: editData.participants || [], custom_reports: editData.custom_reports || [] }); setEditData(null); };
+
+            if(activeEventId && activeEvent) return (
+                <div className="animate-fade-in pb-24">
+                    <div className="flex items-center gap-6 mb-10"><button onClick={()=>setActiveEventId(null)} className="p-3 bg-white rounded-2xl shadow-sm hover:bg-slate-50 text-slate-400 hover:text-indigo-600 border border-slate-100 transition-all"><Icons.Back size={20}/></button><div><h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">Konfigurasi Struktur</h2><p className="text-slate-500 font-medium uppercase tracking-[0.1em] text-[10px] mt-1">Sedang mengedit: <span className="text-indigo-600 font-bold">{activeEvent.name}</span></p></div></div>
+                    <button onClick={() => modal("Mata Lomba Baru", "input", name => { if(name) saveEvent({...activeEvent, categories: [...activeEvent.categories, { id: generateId(), name, judgeCount: 1, locked: false, aspects: [] }]}); }, null, "Nama mata lomba...")} className="w-full py-5 mb-10 border-2 border-dashed border-indigo-200 text-indigo-600 bg-indigo-50/50 rounded-2xl hover:bg-indigo-50 hover:border-indigo-400 font-bold flex justify-center items-center transition-all group"><div className="p-2 bg-indigo-100 rounded-full mr-3 group-hover:scale-110 transition-transform"><Icons.Plus size={18}/></div> Tambahkan Cabang Mata Lomba</button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {activeEvent.categories.map((cat, index) => (
+                            <div key={cat.id} className="bg-white p-6 rounded-[28px] shadow-sm border border-slate-100 group">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="flex items-center gap-4"><div className="flex flex-col gap-0.5"><button disabled={index === 0} onClick={() => moveCategory(cat.id, 'up')} className={`p-1 rounded-md hover:bg-slate-100 ${index===0?'text-slate-200':'text-slate-400 hover:text-indigo-500'}`}><Icons.ArrowUp size={14}/></button><button disabled={index === activeEvent.categories.length - 1} onClick={() => moveCategory(cat.id, 'down')} className={`p-1 rounded-md hover:bg-slate-100 ${index===activeEvent.categories.length-1?'text-slate-200':'text-slate-400 hover:text-indigo-500'}`}><Icons.ArrowDown size={14}/></button></div><div><div className="flex items-center gap-2 group-header"><h3 className="font-black text-lg text-slate-900 tracking-tight leading-none">{cat.name}</h3><button onClick={() => modal("Edit Mata Lomba", "input", (newName) => { if(newName) saveEvent({...activeEvent, categories: activeEvent.categories.map(c => c.id === cat.id ? {...c, name: newName} : c)}); }, null, "Nama lomba...", cat.name)} className="p-1 text-slate-300 hover:text-indigo-500 transition-all opacity-0 group-hover:opacity-100"><Icons.Edit size={12}/></button></div><div className="flex items-center gap-2 mt-2 bg-indigo-50 px-3 py-1 rounded-full w-fit"><Icons.Users size={10} className="text-indigo-500"/><span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Juri:</span><input type="number" min="1" className="w-6 bg-transparent border-none text-[9px] font-black focus:ring-0 p-0 text-indigo-700 text-center" value={cat.judgeCount} onChange={e => { const val = e.target.value; const newValue = val === '' ? '' : parseInt(val); saveEvent({...activeEvent, categories: activeEvent.categories.map(c => c.id === cat.id ? {...c, judgeCount: newValue} : c)}); }} onBlur={() => { if(cat.judgeCount === '' || cat.judgeCount < 1) { saveEvent({...activeEvent, categories: activeEvent.categories.map(c => c.id === cat.id ? {...c, judgeCount: 1} : c)}); } }} /></div></div></div><button onClick={() => modal("Hapus Cabang Lomba?", "confirm", () => saveEvent({...activeEvent, categories: activeEvent.categories.filter(c=>c.id!==cat.id)}), "Tindakan ini tidak dapat dibatalkan.")} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Icons.Trash size={16}/></button></div>
+                                <div className="space-y-2 mb-6 min-h-[40px]">{cat.aspects.map(asp => (<div key={asp.id} className="group/aspect flex justify-between items-center text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/20 transition-all"><div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/aspect:bg-indigo-400"></div><span className="font-bold text-slate-700 tracking-tight">{asp.name}</span></div><div className="flex items-center gap-3"><span className="text-[9px] font-bold bg-white text-slate-400 px-2 py-0.5 rounded-full border border-slate-100 group-hover/aspect:text-indigo-600 group-hover/aspect:border-indigo-100 transition-all uppercase">MAX: {asp.maxScore}</span><div className="flex opacity-0 group-hover/aspect:opacity-100 transition-opacity gap-0.5"><button onClick={() => modal("Edit Aspek", "input", (newName) => { if(newName) { modal("Edit Maksimal Skor", "input", (newMax) => { const maxVal = parseInt(newMax) || 100; const newCats = [...activeEvent.categories]; const c = newCats.find(x => x.id === cat.id); c.aspects = c.aspects.map(a => a.id === asp.id ? {...a, name: newName, maxScore: maxVal} : a); saveEvent({...activeEvent, categories: newCats}); }, null, "Contoh: 100", asp.maxScore.toString()); } }, null, "Nama aspek...", asp.name)} className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-md transition-all"><Icons.Edit size={12}/></button><button onClick={() => saveEvent({...activeEvent, categories: activeEvent.categories.map(c => c.id===cat.id ? {...c, aspects: c.aspects.filter(a=>a.id!==asp.id)} : c)})} className="p-1 text-slate-400 hover:text-red-500 hover:bg-white rounded-md transition-all"><Icons.X size={12}/></button></div></div></div>))}</div>
+                                <button onClick={() => modal("Kriteria Penilaian", "input", name => { if(name) { modal("Maksimal Nilai", "input", max => { const newCats = [...activeEvent.categories]; const c = newCats.find(x => x.id === cat.id); c.aspects.push({ id: generateId(), name, maxScore: parseInt(max)||100 }); saveEvent({...activeEvent, categories: newCats}); }, null, "Contoh: 100"); }}, null, "Nama kriteria...")} className="w-full py-2.5 text-[9px] font-black uppercase tracking-[0.2em] bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-100 hover:text-indigo-600 transition-all border border-slate-100 border-dashed">+ Tambah Kriteria</button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="animate-fade-in"><ModalWrapper isOpen={!!editData} onClose={()=>setEditData(null)}><div className="p-8"><div className="flex justify-between items-center mb-8"><h2 className="text-2xl font-black text-slate-900 tracking-tight">{editData?.id ? 'Ubah Informasi Event' : 'Registrasi Event Baru'}</h2><button onClick={()=>setEditData(null)} className="text-slate-400 hover:text-slate-600"><Icons.X/></button></div><div className="space-y-6"><div><label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Nama Perlombaan</label><input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium" placeholder="Nama event lomba..." value={editData?.name||''} onChange={e=>setEditData({...editData, name: e.target.value})}/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Tanggal Pelaksanaan</label><input type="date" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium" value={editData?.date||''} onChange={e=>setEditData({...editData, date: e.target.value})}/></div><div><label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Lokasi Utama</label><input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium" placeholder="Lokasi..." value={editData?.location||''} onChange={e=>setEditData({...editData, location: e.target.value})}/></div></div><div><label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Identitas Visual (Logo)</label><div className="flex gap-6 items-center bg-slate-50 p-6 rounded-3xl border border-slate-200">{editData?.logo ? (<div className="relative group"><img src={editData.logo} className="w-16 h-16 object-contain border-2 border-white rounded-2xl bg-white shadow-sm"/><button onClick={()=>setEditData({...editData, logo: null})} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition shadow-lg"><Icons.X size={12}/></button></div>) : (<div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-slate-300 border-2 border-dashed border-slate-200 shadow-inner"><Icons.Image size={20}/></div>)}<div className="flex-1"><input type="file" id="event-logo-input" accept="image/*" className="hidden" onChange={handleLogo}/><label htmlFor="event-logo-input" className="inline-flex items-center gap-2 px-5 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm cursor-pointer">{loading ? <Icons.Loader className="animate-spin" size={14}/> : <Icons.Upload size={14}/>} Unggah Logo</label><p className="text-[10px] text-slate-400 mt-2 font-medium">Resolusi 1:1, Maks 1MB.</p></div></div></div></div><div className="flex justify-end gap-3 mt-10"><button onClick={()=>setEditData(null)} className="px-6 py-3 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-all">Batal</button><button onClick={save} className="px-10 py-3 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 font-bold transition-all">Konfirmasi Data</button></div></div></ModalWrapper><div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10"><div><h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Manajemen Event</h1><p className="text-slate-500 font-medium mt-2 text-sm">Atur struktur lomba dan juri untuk setiap event aktif.</p></div><button onClick={()=>setEditData({})} className="px-6 py-3 bg-slate-900 text-white rounded-2xl shadow-lg shadow-slate-200 hover:bg-indigo-600 hover:shadow-indigo-100 font-bold flex items-center gap-3 transition-all text-sm"><Icons.Plus size={18}/> Daftarkan Event</button></div><div className="grid grid-cols-1 gap-4 pb-20">{events.map(e => (<div key={e.id} className="bg-white p-6 rounded-[28px] shadow-sm border border-slate-100 flex flex-col md:flex-row items-center justify-between group hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300"><div className="flex items-center gap-8 w-full"><div className="relative">{e.logo ? <img src={e.logo} className="w-20 h-20 object-contain bg-slate-50 rounded-2xl p-1.5 border border-slate-100 group-hover:scale-105 transition-transform"/> : <div className="w-20 h-20 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-300 group-hover:scale-105 transition-transform"><Icons.Image size={24}/></div>}</div><div className="flex-1"><h3 className="text-xl font-black text-slate-900 tracking-tight group-hover:text-indigo-600 transition-colors leading-none">{e.name}</h3><div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 mt-3 uppercase tracking-[0.1em]"><span className="flex items-center gap-1.5"><Icons.Event size={12} className="text-indigo-400"/> {e.date || 'Tgl N/A'}</span><span className="w-1 h-1 rounded-full bg-slate-200"></span><span className="flex items-center gap-1.5"><Icons.Users size={12} className="text-indigo-400"/> {e.location || 'Lokasi N/A'}</span></div><div className="flex items-center gap-2 mt-4"><span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full uppercase tracking-widest">{e.categories.length} Cabang</span><span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full uppercase tracking-widest">{e.participants.length} Peserta</span></div></div></div><div className="flex gap-2 mt-6 md:mt-0 w-full md:w-auto opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0"><button onClick={()=>setActiveEventId(e.id)} className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-lg hover:bg-indigo-600 transition-all flex items-center gap-2 whitespace-nowrap"><Icons.Settings size={14}/> Struktur</button><button onClick={()=>setEditData(e)} className="p-2.5 text-slate-400 hover:text-indigo-600 bg-slate-50 rounded-xl hover:bg-indigo-50 transition-all"><Icons.Edit size={16}/></button><button onClick={() => modal("Hapus Event?", "confirm", () => deleteEvent(e.id), "Semua data nilai akan hilang selamanya.")} className="p-2.5 text-slate-400 hover:text-red-500 bg-slate-50 rounded-xl hover:bg-red-50 transition-all"><Icons.Trash size={16}/></button></div></div>))}</div></div>
+            );
+        };
+
+        const RecapView = ({ events, saveEvent, modal, triggerTokenModal }) => {
+            const [evtId, setEvtId] = useState(events[0]?.id || '');
+            const [selectedPid, setSelectedPid] = useState(null);
+            // State untuk menyimpan ID kategori yang sedang terbuka (expanded)
+            const [expandedCats, setExpandedCats] = useState({});
+
+            const evt = events.find(e => e.id === evtId);
+            
+            const addP = () => { modal("Registrasi Peserta", "input", num => { if(num && !evt.participants.some(p=>p.number===num)) { modal("Nama Peserta", "input", name => { if(name) saveEvent({...evt, participants: [...evt.participants, { id: generateId(), number: num, name, scores: {} }]}); }, null, "Contoh: Regu Elang") } else alert("Nomor tidak valid"); }, null, "Contoh: 001") };
+            
+            const handleScore = (pid, catId, aspId, jIdx, val, maxScore) => { 
+                if (val === '') {
+                    const newPs = evt.participants.map(p => { if(p.id === pid) { const s = {...p.scores}; if(!s[catId]) s[catId] = {}; if(!s[catId][aspId]) s[catId][aspId] = {}; s[catId][aspId][jIdx] = ''; return {...p, scores: s}; } return p; }); 
+                    saveEvent({...evt, participants: newPs});
+                    return;
+                }
+                const numVal = parseFloat(val);
+                let finalVal = val;
+                if (!isNaN(numVal) && numVal > maxScore) { alert(`Skor maksimal adalah ${maxScore}!`); finalVal = 0; }
+                const newPs = evt.participants.map(p => { if(p.id === pid) { const s = {...p.scores}; if(!s[catId]) s[catId] = {}; if(!s[catId][aspId]) s[catId][aspId] = {}; s[catId][aspId][jIdx] = parseFloat(finalVal) || 0; return {...p, scores: s}; } return p; }); 
+                saveEvent({...evt, participants: newPs}); 
+            };
+            
+            const handleKeyDown = (e, catId, aspId, jIdx, currentCatIndex, currentAspIndex, aspects) => { 
+                if (['e', 'E', '+', '-'].includes(e.key)) { e.preventDefault(); }
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') { 
+                    e.preventDefault(); let nextAspIndex = currentAspIndex; if (e.key === 'ArrowDown' || e.key === 'Enter') { nextAspIndex = currentAspIndex + 1; } else if (e.key === 'ArrowUp') { nextAspIndex = currentAspIndex - 1; } 
+                    if (nextAspIndex >= 0 && nextAspIndex < aspects.length) { const nextAsp = aspects[nextAspIndex]; const nextId = `input-${catId}-${nextAsp.id}-${jIdx}`; const el = document.getElementById(nextId); if (el) el.focus(); } 
+                } 
+            };
+
+            const handleToggleLock = (catId, currentStatus) => { 
+                if (currentStatus) { 
+                    modal("Masukkan PIN Otorisasi", "input", (password) => { 
+                        if(password === "0716307164") { const newCats = evt.categories.map(c => c.id === catId ? {...c, locked: false} : c); saveEvent({...evt, categories: newCats}); } else { alert("PIN Salah."); } 
+                    }, null, "Masukkan PIN..."); 
+                } else { const newCats = evt.categories.map(c => c.id === catId ? {...c, locked: true} : c); saveEvent({...evt, categories: newCats}); } 
+            };
+
+            const handleReleaseToken = (p) => {
+                if(p.token) {
+                    triggerTokenModal(evt, p, p.token);
+                } else {
+                    const newToken = generateToken();
+                    const updatedPs = evt.participants.map(x => x.id === p.id ? {...x, token: newToken} : x);
+                    saveEvent({ ...evt, participants: updatedPs });
+                    setTimeout(() => {
+                        triggerTokenModal(evt, p, newToken);
+                    }, 500);
+                }
+            };
+
+            // Fungsi Toggle Accordion
+            const toggleCat = (catId) => {
+                setExpandedCats(prev => ({ ...prev, [catId]: !prev[catId] }));
+            };
+
+            // Fungsi Hitung Persentase Pengisian
+            const getCompletion = (p, cat) => {
+                let totalSlots = 0;
+                let filledSlots = 0;
+                cat.aspects.forEach(asp => {
+                    for(let i=1; i<=cat.judgeCount; i++) {
+                        totalSlots++;
+                        const val = p.scores?.[cat.id]?.[asp.id]?.[i];
+                        if (val !== undefined && val !== '' && val !== null) {
+                            filledSlots++;
+                        }
+                    }
+                });
+                return totalSlots === 0 ? 0 : Math.round((filledSlots / totalSlots) * 100);
+            };
+
+            if(!evt) return <div className="text-center p-20 glass-card rounded-[40px] text-slate-300 font-bold uppercase tracking-widest border border-slate-100">Buat event di menu Struktur.</div>;
+            
+            if(selectedPid) {
+                const p = evt.participants.find(x => x.id === selectedPid);
+                return (
+                    <div className="animate-fade-in pb-20">
+                        {/* Header Peserta */}
+                        <div className="sticky top-0 bg-white/90 backdrop-blur-md z-30 py-3 mb-6 border-b border-slate-200 flex justify-between items-center -mx-10 px-10 shadow-sm transition-all">
+                            <div className="flex items-center gap-4">
+                                <button onClick={()=>setSelectedPid(null)} className="p-2 hover:bg-slate-100 rounded-lg transition-all border border-slate-200 text-slate-500 hover:text-indigo-600"><Icons.Back size={18}/></button>
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">{p.name}</h2>
+                                        <button onClick={() => handleReleaseToken(p)} className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title={p.token ? "Lihat Token" : "Buat Token"}>
+                                            <Icons.Key size={14}/>
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mt-1 bg-indigo-50 px-2 py-0.5 rounded w-fit">No. {p.number}</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[9px] text-slate-400 uppercase font-bold tracking-widest">Total Skor</p>
+                                <p className="text-3xl font-black text-indigo-600 leading-none">{getCustomTotal(p, evt.categories).toFixed(2)}</p>
+                            </div>
+                        </div>
+                        
+                        {/* List Mata Lomba (Accordion) */}
+                        <div className="space-y-4 max-w-6xl mx-auto">
+                            {evt.categories.map((cat, catIdx) => {
+                                const isExpanded = expandedCats[cat.id];
+                                const completion = getCompletion(p, cat);
+                                
+                                return (
+                                    <div key={cat.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300">
+                                        {/* Header Accordion - Klik untuk Buka/Tutup */}
+                                        <div 
+                                            onClick={() => toggleCat(cat.id)}
+                                            className={`px-4 py-3 border-b flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors ${cat.locked ? 'bg-red-50/30' : 'bg-white'}`}
+                                        >
+                                            <div className="flex items-center gap-4 flex-1">
+                                                {/* Icon Panah Indikator */}
+                                                <div className={`p-1.5 rounded-full bg-slate-100 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-indigo-50 text-indigo-500' : ''}`}>
+                                                    <Icons.ArrowDown size={14}/>
+                                                </div>
+                                                
+                                                <div className="flex flex-col gap-1 w-full max-w-md">
+                                                    <h3 className="font-bold text-sm text-slate-700 uppercase tracking-wide flex items-center gap-2">
+                                                        {cat.name}
+                                                        {cat.locked && <Icons.Lock size={12} className="text-red-400"/>}
+                                                    </h3>
+                                                    
+                                                    {/* Progress Bar & Status */}
+                                                    <div className="flex items-center gap-3 w-full">
+                                                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                            <div 
+                                                                className={`h-full rounded-full transition-all duration-500 ${completion === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
+                                                                style={{width: `${completion}%`}}
+                                                            ></div>
+                                                        </div>
+                                                        <span className={`text-[9px] font-bold ${completion === 100 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                            {completion}% Terisi
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Kontrol Kanan (Lock & Subtotal) - stopPropagation agar tidak menutup accordion */}
+                                            <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+                                                <button 
+                                                    onClick={() => handleToggleLock(cat.id, cat.locked)} 
+                                                    className={`p-1.5 rounded-lg transition-all ${cat.locked ? 'bg-red-500 text-white shadow-red-200 shadow-md' : 'bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200'}`} 
+                                                    title={cat.locked ? "Buka Kunci" : "Kunci Nilai"}
+                                                >
+                                                    {cat.locked ? <Icons.Lock size={14}/> : <Icons.Unlock size={14}/>}
+                                                </button>
+                                                <div className={`px-4 py-1.5 rounded-xl text-xs font-black tracking-widest uppercase min-w-[80px] text-center ${cat.locked ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
+                                                    {getCategoryTotal(p, cat).toFixed(2)}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Isi Input Nilai (Hanya muncul jika expanded) */}
+                                        {isExpanded && (
+                                            <div className="animate-fade-in bg-slate-50/30">
+                                                <table className="w-full text-left">
+                                                    <thead>
+                                                        <tr className="text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                                            <th className="px-6 py-3 w-1/3">Aspek Penilaian</th>
+                                                            {Array.from({length:cat.judgeCount}).map((_,i)=><th key={i} className="px-2 py-3 text-center">Juri {i+1}</th>)}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {cat.aspects.map((asp, aspIdx) => (
+                                                            <tr key={asp.id} className="hover:bg-white transition-colors">
+                                                                <td className="px-6 py-2 align-middle">
+                                                                    <div className="font-bold text-slate-700 text-xs leading-tight">{asp.name}</div>
+                                                                    <div className="text-[9px] text-slate-400 font-medium mt-0.5 bg-white border border-slate-200 px-1.5 py-0.5 rounded w-fit">Max: {asp.maxScore}</div>
+                                                                </td>
+                                                                {Array.from({length:cat.judgeCount}).map((_,i) => (
+                                                                    <td key={i} className="px-2 py-2 text-center">
+                                                                        <input 
+                                                                            type="number" id={`input-${cat.id}-${asp.id}-${i+1}`} 
+                                                                            className={`w-16 p-2 text-center rounded-lg font-bold text-sm outline-none transition-all ${cat.locked ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-transparent' : 'bg-white border border-slate-200 focus:border-indigo-500 focus:ring-2 ring-indigo-500/10 shadow-sm focus:shadow-md'}`} 
+                                                                            value={p.scores?.[cat.id]?.[asp.id]?.[i+1] ?? ''} 
+                                                                            onChange={e => handleScore(p.id, cat.id, asp.id, i+1, e.target.value, asp.maxScore)} 
+                                                                            onKeyDown={(e) => handleKeyDown(e, cat.id, asp.id, i+1, catIdx, aspIdx, cat.aspects)} 
+                                                                            onFocus={(e) => e.target.select()} 
+                                                                            onWheel={(e) => e.target.blur()} 
+                                                                            placeholder="-" 
+                                                                            disabled={cat.locked} 
+                                                                        />
+                                                                    </td>
+                                                                ))}
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            }
+            return (
+                <div className="animate-fade-in"><div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10 bg-white p-5 rounded-[28px] shadow-sm border border-slate-100"><div className="flex-1 w-full"><label className="block text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Event Sumber Data</label><select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-slate-800 text-sm outline-none transition-all cursor-pointer" value={evtId} onChange={e=>setEvtId(e.target.value)}>{events.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></div><button onClick={addP} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 whitespace-nowrap transition-all flex items-center gap-3 text-sm"><Icons.Plus size={18}/> Registrasi Peserta</button></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">{evt.participants.map(p => (<div key={p.id} onClick={()=>setSelectedPid(p.id)} className="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-xl hover:translate-y-[-2px] cursor-pointer transition-all duration-300 group relative overflow-hidden"><div className="absolute top-0 right-0 w-20 h-20 bg-indigo-50 rounded-bl-[80px] -mr-8 -mt-8 group-hover:scale-110 transition-transform opacity-50"></div><div className="flex justify-between items-start mb-4 relative z-10"><span className="font-black text-[9px] text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full tracking-widest uppercase">#{p.number}</span><button onClick={(e)=>{e.stopPropagation(); modal("Diskualifikasi Peserta?", "confirm", ()=>saveEvent({...evt, participants: evt.participants.filter(x=>x.id!==p.id)}), "Hapus data nilai peserta ini?");}} className="text-slate-200 hover:text-red-500 p-2 transition-colors"><Icons.Trash size={16}/></button></div><h3 className="text-lg font-black text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors tracking-tight leading-none truncate">{p.name}</h3><div className="flex flex-col gap-1 mt-4"><p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Total Skor</p><p className="text-3xl font-black text-slate-800">{getCustomTotal(p, evt.categories).toFixed(2)}</p></div></div>))}</div></div>
+            );
+        };
+
+        const SheetGeneratorView = ({ events, download, preview, savedSheets, saveSheet, deleteSheet, modal }) => {
+            const [evtId, setEvtId] = useState(events[0]?.id || '');
+            const [catId, setCatId] = useState('');
+            const [judgeNum, setJudgeNum] = useState(1);
+            const [inputType, setInputType] = useState('manual');
+            const [customOptions, setCustomOptions] = useState('10,20,30,40,50');
+            const evt = events.find(e => e.id === evtId);
+            const cat = evt?.categories.find(c => c.id === catId);
+            useEffect(() => { if(evt && evt.categories.length > 0) setCatId(evt.categories[0].id); }, [evt]);
+            const handleSave = () => { if(!evt || !cat) return; saveSheet({ evtId, catId, judgeNum, inputType, options: inputType === 'choice' ? customOptions.split(',').map(s=>s.trim()) : [], title: `${cat.name} - Juri ${judgeNum}`, timestamp: new Date().toLocaleString() }); };
+            const getSheetData = (sheet) => { const sEvt = events.find(e => e.id === sheet.evtId); const sCat = sEvt?.categories.find(c => c.id === sheet.catId); if (!sEvt || !sCat) return null; return { event: sEvt, type: 'assessment_sheet', category: sCat, judgeNum: sheet.judgeNum, inputType: sheet.inputType, options: sheet.options }; };
+            const handleDownloadAll = async () => { if (savedSheets.length === 0) return; if (!confirm(`Cetak ${savedSheets.length} dokumen secara massal?`)) return; for (let i = 0; i < savedSheets.length; i++) { const sheet = savedSheets[i]; const data = getSheetData(sheet); if (data) { await download(data, `Sheet_${data.category.name}_Juri${sheet.judgeNum}`); await new Promise(r => setTimeout(r, 600)); } } };
+            if(!evt) return <div className="text-center p-20 glass-card rounded-[40px] text-slate-300 font-bold uppercase tracking-widest border border-slate-100">Pilih atau buat event terlebih dahulu.</div>;
+            return ( <div className="animate-fade-in max-w-5xl mx-auto pb-20"><header className="mb-10"><h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Dokumen Penjurian</h1><p className="text-slate-500 font-medium mt-2 text-sm">Cetak lembar penilaian fisik untuk dewan juri.</p></header><div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 space-y-8 mb-10"><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-4"><label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Event Utama</label><select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-sm outline-none transition-all cursor-pointer" value={evtId} onChange={e=>setEvtId(e.target.value)}>{events.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></div><div className="space-y-4"><label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cabang Lomba</label><select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-sm outline-none transition-all cursor-pointer" value={catId} onChange={e=>setCatId(e.target.value)}>{evt.categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div></div>{cat && (<div className="space-y-4"><label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identitas Juri</label><div className="flex flex-wrap gap-2">{Array.from({length: cat.judgeCount}).map((_, i) => (<button key={i} onClick={()=>setJudgeNum(i+1)} className={`px-4 py-2 rounded-xl border-2 font-black transition-all text-[10px] tracking-widest uppercase ${judgeNum===i+1 ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-400 border-slate-100 hover:border-indigo-200'}`}>Juri {i+1}</button>))}</div></div>)}<div className="border-t border-slate-50 pt-8"><label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-4">Format Nilai PDF</label><div className="flex flex-col md:flex-row gap-4 mb-6"><button onClick={()=>setInputType('manual')} className={`flex-1 p-4 rounded-2xl border-2 transition-all text-left group ${inputType==='manual' ? 'border-indigo-600 bg-indigo-50/20' : 'border-slate-100 bg-white hover:border-slate-200'}`}><h4 className={`font-black text-sm tracking-tight ${inputType==='manual' ? 'text-indigo-700' : 'text-slate-800'}`}>Input Manual</h4><p className="text-[9px] text-slate-400 font-medium uppercase mt-1 tracking-widest">Kolom nilai kosong</p></button><button onClick={()=>setInputType('choice')} className={`flex-1 p-4 rounded-2xl border-2 transition-all text-left group ${inputType==='choice' ? 'border-indigo-600 bg-indigo-50/20' : 'border-slate-100 bg-white hover:border-slate-200'}`}><h4 className={`font-black text-sm tracking-tight ${inputType==='choice' ? 'text-indigo-700' : 'text-slate-800'}`}>Pilihan Ganda</h4><p className="text-[9px] text-slate-400 font-medium uppercase mt-1 tracking-widest">Opsi nilai instan</p></button></div></div><button onClick={handleSave} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black shadow-lg shadow-slate-200 hover:bg-indigo-600 transition-all text-sm">Simpan ke Antrean Cetak</button></div><div className="space-y-6"><div className="flex justify-between items-center mb-4 px-2"><h3 className="text-xl font-black text-slate-900 tracking-tight leading-none">Antrean Dokumen</h3>{savedSheets.length > 0 && (<button onClick={handleDownloadAll} className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 flex items-center gap-2 transition-all text-[10px] tracking-widest uppercase"><Icons.Download size={14}/> Cetak Semua ({savedSheets.length})</button>)}</div><div className="grid grid-cols-1 md:grid-cols-2 gap-4">{savedSheets.map(sheet => (<div key={sheet.id} className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm flex justify-between items-center group hover:border-indigo-200 transition-all"><div className="flex items-center gap-4"><div className="p-2 bg-slate-50 rounded-lg text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors"><Icons.Sheet size={20}/></div><div><h4 className="font-bold text-sm text-slate-800 group-hover:text-indigo-700 transition-colors leading-none tracking-tight">{sheet.title}</h4><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">{sheet.timestamp}</p></div></div><div className="flex gap-1.5"><button onClick={() => preview(getSheetData(sheet))} className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><Icons.Eye size={16}/></button><button onClick={() => download(getSheetData(sheet), `Sheet_${sheet.title}`)} className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><Icons.Download size={16}/></button><button onClick={() => deleteSheet(sheet.id)} className="p-2 bg-slate-50 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all"><Icons.Trash size={16}/></button></div></div>))}</div></div></div> );
+        };
+
+        const ReportView = ({ events, saveEvent, settings, download, modal }) => {
+            const [evtId, setEvtId] = useState(events[0]?.id || '');
+            const [customModalOpen, setCustomModalOpen] = useState(false);
+            const [customConfig, setCustomConfig] = useState({ title: '', selectedCats: [] });
+            
+            const evt = events.find(e => e.id === evtId);
+            if(!evt) return null;
+
+            const handleSaveCustomReport = () => { if(!customConfig.title || customConfig.selectedCats.length === 0) return alert("Pilih cabang dan isi judul!"); const newCustomReport = { id: generateId(), name: customConfig.title, categoryIds: customConfig.selectedCats }; saveEvent({ ...evt, custom_reports: [...(evt.custom_reports || []), newCustomReport] }); setCustomModalOpen(false); setCustomConfig({ title: '', selectedCats: [] }); };
+            const getSortedParticipants = (participants, sectionKey, getScoreFn) => { return [...participants].sort((a, b) => { const scoreA = getScoreFn(a); const scoreB = getScoreFn(b); if (Math.abs(scoreA - scoreB) > 0.0001) return scoreB - scoreA; const priorityA = evt.tieBreakers?.[sectionKey]?.[a.id] || 0; const priorityB = evt.tieBreakers?.[sectionKey]?.[b.id] || 0; return priorityB - priorityA; }); };
+            const handleTieBreak = (sectionKey, participantId, direction, getScoreFn) => { const allParticipants = [...evt.participants]; const targetParticipant = allParticipants.find(p => p.id === participantId); if (!targetParticipant) return; const targetScore = getScoreFn(targetParticipant); const tiedParticipants = allParticipants.filter(p => Math.abs(getScoreFn(p) - targetScore) < 0.0001); if (tiedParticipants.length < 2) return; const sectionBreakers = evt.tieBreakers?.[sectionKey] || {}; tiedParticipants.sort((a, b) => { const pA = sectionBreakers[a.id] || 0; const pB = sectionBreakers[b.id] || 0; return pB - pA; }); const currentIndex = tiedParticipants.findIndex(p => p.id === participantId); if (currentIndex === -1) return; let swapTargetIndex = -1; if (direction === 'up' && currentIndex > 0) swapTargetIndex = currentIndex - 1; else if (direction === 'down' && currentIndex < tiedParticipants.length - 1) swapTargetIndex = currentIndex + 1; if (swapTargetIndex !== -1) { const temp = tiedParticipants[currentIndex]; tiedParticipants[currentIndex] = tiedParticipants[swapTargetIndex]; tiedParticipants[swapTargetIndex] = temp; const newSectionBreakers = { ...sectionBreakers }; tiedParticipants.forEach((p, idx) => { newSectionBreakers[p.id] = tiedParticipants.length - idx; }); saveEvent({ ...evt, tieBreakers: { ...evt.tieBreakers, [sectionKey]: newSectionBreakers } }); } };
+            const updateWinnerCount = (sectionId, count) => { const currentConfigs = evt.reportConfigs || {}; saveEvent({ ...evt, reportConfigs: { ...currentConfigs, [sectionId]: parseInt(count) || 0 } }); };
+            const getWinnerCount = (sectionId) => evt.reportConfigs?.[sectionId] ?? 3;
+            const doDownload = (type, idOrConfig, title) => { const data = { event: evt, type, title }; if (type === 'category') data.categoryId = idOrConfig; if (type === 'custom') { data.selectedCats = idOrConfig.categoryIds; data.title = idOrConfig.name; } if (type === 'overall') data.selectedCats = evt.categories.map(c=>c.id); if (type === 'full_report') data.selectedCats = evt.categories.map(c=>c.id); download(data, `${title.replace(/\s+/g, '_')}_${evt.name.replace(/\s+/g, '_')}`); };
+            const TableHeaderConfig = ({ sectionId, title, onDownload }) => ( <div className="px-6 py-4 bg-slate-900 text-white font-black flex flex-col md:flex-row items-center justify-between gap-4 uppercase tracking-widest text-[10px]"> <div className="flex items-center gap-3"><Icons.Trophy size={16} className="text-yellow-400"/> {title}</div> <div className="flex items-center gap-4"> <div className="flex items-center bg-white/10 px-3 py-1.5 rounded-lg border border-white/5"> <span className="mr-2 text-white/50">Highlight Juara:</span> <input type="number" min="0" className="w-10 bg-transparent text-white font-black outline-none border-b border-white/30 focus:border-indigo-400 text-center" value={getWinnerCount(sectionId)} onChange={e => updateWinnerCount(sectionId, e.target.value)} onFocus={(e) => e.target.select()} /> </div> <button onClick={onDownload} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all flex items-center gap-1.5"><Icons.Download size={12}/> PDF</button> </div> </div> );
+            const renderParticipantsTable = (participants, sectionId, getScoreFn, columns = []) => { const sorted = getSortedParticipants(participants, sectionId, getScoreFn); const winnerCount = getWinnerCount(sectionId); return ( <div className="overflow-x-auto"> <table className="w-full text-sm text-left"> <thead className="bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest"> <tr> <th className="px-3 py-2 w-12 text-center">Rank</th> <th className="px-3 py-2">Peserta</th> {columns.map((c, idx) => <th key={idx} className="px-2 py-2 text-center">{c.name}</th>)} <th className="px-3 py-2 text-right">Skor Akhir</th> </tr> </thead> <tbody className="divide-y divide-slate-50"> {sorted.map((p, i) => { const score = getScoreFn(p); const nextP = i < sorted.length - 1 ? sorted[i+1] : null; const prevP = i > 0 ? sorted[i-1] : null; const nextScore = nextP ? getScoreFn(nextP) : -1; const prevScore = prevP ? getScoreFn(prevP) : -1; const isTieWithNext = nextP && Math.abs(score - nextScore) < 0.0001; const isTieWithPrev = prevP && Math.abs(score - prevScore) < 0.0001; const hasTie = isTieWithNext || isTieWithPrev; const rankClass = (i < winnerCount) ? (RANK_PALETTE[i] || 'bg-slate-50 border-slate-100') : ''; return ( <tr key={p.id} className={`${rankClass} transition-colors border-l-4 ${i < winnerCount ? 'border-l-indigo-500' : 'border-l-transparent'}`}> <td className="px-3 py-2 text-center font-black text-slate-400 text-xs">{i+1}</td> <td className="px-3 py-2 font-black text-slate-800 tracking-tight text-xs"> {p.name} <span className="font-bold text-slate-300 text-[8px] ml-1 tracking-widest uppercase">#{p.number}</span> </td> {columns.map((col, idx) => ( <td key={idx} className="px-2 py-2 text-center font-bold text-slate-500 text-xs">{col.val(p).toFixed(2)}</td> ))} <td className="px-3 py-2 text-right"> <div className="flex items-center justify-end gap-2"> {hasTie && ( <div className="flex flex-col gap-0.5 opacity-60 hover:opacity-100 transition-opacity"> <button onClick={() => handleTieBreak(sectionId, p.id, 'up', getScoreFn)} disabled={!isTieWithPrev} className={`p-0.5 ${!isTieWithPrev ? 'text-slate-200 cursor-default' : 'hover:text-indigo-600 cursor-pointer'}`} > <Icons.ArrowUp size={10}/> </button> <button onClick={() => handleTieBreak(sectionId, p.id, 'down', getScoreFn)} disabled={!isTieWithNext} className={`p-0.5 ${!isTieWithNext ? 'text-slate-200 cursor-default' : 'hover:text-indigo-600 cursor-pointer'}`} > <Icons.ArrowDown size={10}/> </button> </div> )} <span className="font-black text-indigo-600 text-sm">{score.toFixed(2)}</span> </div> </td> </tr> ); })} </tbody> </table> </div> ); };
+
+            return ( <div className="animate-fade-in max-w-6xl mx-auto pb-20"><ModalWrapper isOpen={customModalOpen} onClose={()=>setCustomModalOpen(false)}><div className="p-8 text-sm"><div className="flex justify-between items-center mb-8"><h3 className="text-xl font-black text-slate-900 tracking-tight">Kategori Gabungan</h3><button onClick={()=>setCustomModalOpen(false)}><Icons.X size={20}/></button></div><div className="space-y-6"><div><label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Label Laporan</label><input className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium" placeholder="Contoh: Juara Gabungan PBB..." value={customConfig.title} onChange={e => setCustomConfig({...customConfig, title: e.target.value})}/></div><div><p className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Mata Lomba Sumber:</p><div className="flex flex-wrap gap-2">{evt.categories.map(c => (<label key={c.id} className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 cursor-pointer select-none transition-all ${customConfig.selectedCats.includes(c.id) ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-100 hover:border-slate-200 text-slate-500'}`}><input type="checkbox" className="hidden" checked={customConfig.selectedCats.includes(c.id)} onChange={()=>{if(customConfig.selectedCats.includes(c.id)) setCustomConfig(p => ({...p, selectedCats: p.selectedCats.filter(x => x !== c.id)})); else setCustomConfig(p => ({...p, selectedCats: [...p.selectedCats, c.id]}));}}/><span className="text-[9px] font-black uppercase tracking-widest">{c.name}</span>{customConfig.selectedCats.includes(c.id) && <Icons.Check size={10}/>}</label>))}</div></div></div><div className="mt-8 flex justify-end gap-3"><button onClick={()=>setCustomModalOpen(false)} className="px-6 py-2.5 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-all">Batal</button><button onClick={handleSaveCustomReport} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg hover:bg-indigo-700 font-bold transition-all">Simpan</button></div></div></ModalWrapper><div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 mb-10 sticky top-0 z-20"><div className="flex flex-col md:flex-row justify-between items-center gap-6"><div className="flex-1 w-full"><h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Event Data</h2><select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-slate-800 text-sm outline-none transition-all" value={evtId} onChange={e=>setEvtId(e.target.value)}>{events.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></div><div className="flex gap-2"><button onClick={()=>setCustomModalOpen(true)} className="px-4 py-3 bg-white border-2 border-slate-200 text-slate-600 rounded-xl font-black text-[10px] tracking-widest uppercase hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-2"><Icons.Merge size={14}/> Gabungkan Mata Lomba</button><button onClick={()=>doDownload('full_report', null, 'Rekap_Lengkap')} className="px-5 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] tracking-widest uppercase shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center gap-2"><Icons.Download size={14}/> Unduh Semua Laporan</button></div></div></div><div className="space-y-12"><div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden"><TableHeaderConfig sectionId="overall" title="Klasemen Juara Umum" onDownload={() => doDownload('overall', null, 'Juara_Umum')} />{renderParticipantsTable(evt.participants, 'overall', (p) => getCustomTotal(p, evt.categories), evt.categories.map(c => ({ name: c.name, val: (p) => getCategoryTotal(p, c) })))}</div><div className="grid grid-cols-1 lg:grid-cols-2 gap-8">{evt.categories.map(cat => (<div key={cat.id} className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden"><div className="px-5 py-4 bg-slate-50 text-slate-800 font-black border-b border-slate-100 flex items-center justify-between text-[9px] uppercase tracking-widest"><div className="flex items-center gap-4"><span>Mata Lomba: {cat.name}</span><div className="flex items-center bg-white border px-2 py-1 rounded"><span className="mr-1 text-slate-400">Juara:</span><input type="number" className="w-8 bg-transparent text-indigo-600 font-black outline-none" value={getWinnerCount(cat.id)} onChange={e => updateWinnerCount(cat.id, e.target.value)} onFocus={(e) => e.target.select()} /></div></div><button onClick={() => doDownload('category', cat.id, cat.name)} className="p-1.5 hover:text-indigo-600 transition-colors"><Icons.Download size={14}/></button></div>{renderParticipantsTable(evt.participants, cat.id, (p) => getCategoryTotal(p, cat))}</div>))}</div>{evt.custom_reports && evt.custom_reports.map(cr => { const cats = evt.categories.filter(c => cr.categoryIds.includes(c.id)); return ( <div key={cr.id} className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden"> <TableHeaderConfig sectionId={cr.id} title={`${cr.name} (Gabungan)`} onDownload={() => doDownload('custom', cr, cr.name)} /> {renderParticipantsTable(evt.participants, cr.id, (p) => getCustomTotal(p, cats), cats.map(c => ({ name: c.name, val: (p) => getCategoryTotal(p, c) })))} </div> ); })}</div></div> );
+        };
+
+        const AppSettings = ({ settings, saveSettings, events, saveEvent, modal }) => {
+            const handleLogo = async (e) => { if(e.target.files[0]) { try { const resized = await resizeImage(e.target.files[0], 120); saveSettings({ ...settings, appLogo: resized }); } catch(err) { alert("Gagal"); } } };
+            // Export hanya mendownload JSON untuk backup lokal (tidak mengubah DB)
+            const handleExport = () => { const data = { version: "5.6", timestamp: new Date().toISOString(), events, settings }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `ResRekap_Backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); };
+            
+            // Import akan menimpa data di Firestore
+            const handleImport = (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if(!data.events || !data.settings) throw new Error();
+                        modal("Sinkronisasi Data", "confirm", () => {
+                            // Timpa settings
+                            saveSettings(data.settings);
+                            // Timpa events (ini proses berat jika banyak, idealnya batch, tapi untuk simpel kita loop)
+                            data.events.forEach(ev => saveEvent(ev));
+                            alert("Sistem berhasil disinkronkan ke Cloud!");
+                        }, "Data cloud saat ini akan ditimpa dengan backup ini. Lanjutkan?");
+                    } catch(err) { alert("Format file tidak valid."); }
+                    e.target.value = '';
+                };
+                reader.readAsText(file);
+            };
+
+            return ( <div className="animate-fade-in max-w-4xl mx-auto space-y-10 pb-20"><header><h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Konfigurasi Sistem</h1><p className="text-slate-500 font-medium mt-2 text-sm">Kelola identitas aplikasi dan sinkronisasi data.</p></header><div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 space-y-10"><div className="space-y-6"><h3 className="text-lg font-extrabold text-slate-800 tracking-tight flex items-center gap-3"><Icons.Image size={20} className="text-indigo-600"/> Identitas Penyelenggara</h3><div className="space-y-4"><label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nama Instansi / Panitia (Muncul di Header PDF)</label><input className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-sm outline-none focus:ring-4 ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-inner" value={settings.organizerName} onChange={e=>saveSettings({...settings, organizerName: e.target.value})} placeholder="Kwartir Daerah Gerakan Pramuka..."/></div><div className="space-y-4"><label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Logo Utama Aplikasi</label><div className="flex items-center gap-6 p-5 bg-slate-50 border border-slate-100 rounded-2xl">{settings.appLogo ? (<div className="relative group"><img src={settings.appLogo} className="w-16 h-16 object-contain border-4 border-white rounded-xl bg-white shadow-sm"/><button onClick={()=>saveSettings({...settings, appLogo: null})} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-all"><Icons.X size={10}/></button></div>) : (<div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-slate-300 border-2 border-dashed border-slate-200 shadow-inner"><Icons.Image size={24}/></div>)}<div className="flex-1"><input type="file" id="app-logo-upload" accept="image/*" onChange={handleLogo} className="hidden"/><label htmlFor="app-logo-upload" className="inline-flex items-center gap-2 px-5 py-2 bg-white border border-slate-200 rounded-xl text-[9px] font-black uppercase tracking-widest hover:border-indigo-500 transition-all shadow-sm cursor-pointer"><Icons.Upload size={14}/> Unggah Logo</label></div></div></div></div><div className="pt-8 border-t border-slate-50 space-y-6"><h3 className="text-lg font-extrabold text-slate-800 tracking-tight flex items-center gap-3"><Icons.Save size={20} className="text-indigo-600"/> Basis Data (JSON)</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><button onClick={handleExport} className="group p-5 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-white hover:border-indigo-200 transition-all text-left"><h4 className="font-black text-sm text-slate-800 tracking-tight">Unduh Backup</h4><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ekspor seluruh data ke file JSON</p></button><label className="group p-5 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-white hover:border-indigo-200 transition-all text-left cursor-pointer"><h4 className="font-black text-sm text-slate-800 tracking-tight">Impor Data</h4><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Pulihkan data dari file .json</p><input type="file" accept=".json" className="hidden" onChange={handleImport}/></label></div></div></div></div> );
+        };
+
+        const PDFContent = ({ data, settings }) => {
+            if(!data || !data.event) return null;
+            const { event, type, title, selectedCats, categoryId, category, judgeNum, inputType, options } = data;
+            const now = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            const getSorted = (participants, sectionKey, getScoreFn) => { return [...participants].sort((a, b) => { const scoreA = getScoreFn(a); const scoreB = getScoreFn(b); if (Math.abs(scoreA - scoreB) > 0.0001) return scoreB - scoreA; const priorityA = event.tieBreakers?.[sectionKey]?.[a.id] || 0; const priorityB = event.tieBreakers?.[sectionKey]?.[b.id] || 0; return priorityB - priorityA; }); };
+            const getWinnerCount = (sectionId) => event.reportConfigs?.[sectionId] ?? 3;
+
+            if (type === 'assessment_sheet') { return ( <div style={{display: 'flex', flexDirection: 'column', height: '100%'}}><div className="flex items-center justify-between border-b-[3px] border-slate-900 pb-4 mb-6"><div><h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">{settings.organizerName}</h2><h1 className="text-2xl font-black uppercase mb-1 text-slate-900 leading-tight">{event.name}</h1><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{event.location} • {event.date}</p></div>{event.logo && <img src={event.logo} className="h-16 w-auto object-contain" />}</div><div className="text-center mb-6"><h2 className="text-xl font-bold uppercase underline decoration-[3px] underline-offset-4 mb-2">LEMBAR PENILAIAN JURI</h2><div className="flex justify-center gap-8 text-[10pt] font-bold tracking-tight text-slate-800"><span>MATA LOMBA: {category.name}</span><span className="text-slate-300">|</span><span>JURI KE-{judgeNum}</span></div></div><div className="mb-6 border-2 border-slate-900 p-4 rounded-lg bg-slate-50/50"><div className="grid grid-cols-2 gap-10"><div className="border-b-2 border-slate-300 border-dotted pb-1 text-[10pt] font-bold">NOMOR PESERTA: ............................</div><div className="border-b-2 border-slate-300 border-dotted pb-1 text-[10pt] font-bold">NAMA TIM / REGU: ............................</div></div></div><table className="pdf-table" style={{border: '2px solid #000'}}><thead><tr><th style={{width: '40px'}}>NO</th><th style={{textAlign: 'left'}}>KRITERIA PENILAIAN</th><th style={{width: '60px'}}>MAX</th>{inputType === 'choice' ? <th style={{width: '300px'}}>Opsi Nilai (Coret)</th> : <th style={{width: '100px'}}>Nilai</th>}</tr></thead><tbody>{category.aspects.map((asp, i) => (<tr key={asp.id} style={{backgroundColor: i % 2 === 0 ? '#fff' : '#f8fafc'}}><td style={{textAlign: 'center', fontWeight: 'bold'}}>{i+1}</td><td style={{fontWeight: 'bold', fontSize: '10pt'}}>{asp.name}</td><td style={{textAlign: 'center', fontWeight: 'bold'}}>{asp.maxScore}</td>{inputType === 'manual' ? (<td style={{padding: '4px'}}><div style={{height: '35px', border: '1px solid #ccc', margin: '2px auto', borderRadius: '4px', background: '#fff'}}></div></td>) : (<td style={{padding: '0'}}><table style={{width: '100%', borderCollapse: 'collapse', border: 'none', height: '40px'}}><tbody><tr>{options.map((opt, idx) => (<td key={idx} style={{ borderRight: idx !== options.length - 1 ? '1px solid #000' : 'none', borderLeft: 'none', borderTop: 'none', borderBottom: 'none', textAlign: 'center', fontWeight: 'bold', fontSize: '9pt', padding: '4px' }}>{opt}</td>))}</tr></tbody></table></td>)}</tr>))}</tbody></table></div> ); }
+
+            const renderTable = (participants, sectionId, getScoreFn, cols, tableTitle) => {
+                const sorted = getSorted(participants, sectionId, getScoreFn);
+                const winnerCount = getWinnerCount(sectionId);
+                return ( <div className="mb-12" style={{pageBreakInside: 'avoid'}}>{tableTitle && <h3 className="text-[12pt] font-black uppercase mb-4 border-b-4 border-slate-900 pb-2 inline-block tracking-tight">{tableTitle}</h3>}<table className="pdf-table" style={{border: '2px solid #000'}}><thead style={{backgroundColor: '#1e293b', color: '#fff'}}><tr><th style={{width: '50px', border: '1px solid #fff'}}>RANK</th><th style={{width: '60px', border: '1px solid #fff'}}>NO</th><th style={{textAlign: 'left', border: '1px solid #fff'}}>NAMA PESERTA / TIM</th>{cols.map((c, i) => <th key={i} style={{border: '1px solid #fff'}}>{c.label}</th>)}<th style={{width: '100px', backgroundColor: '#334155', color: '#fff', border: '1px solid #fff'}}>TOTAL</th></tr></thead><tbody>{sorted.map((p, idx) => { const rank = idx + 1; const bg = (idx < winnerCount) ? RANK_PALETTE_PDF[idx] || '#f8fafc' : '#fff'; return ( <tr key={p.id} style={{backgroundColor: bg}}><td style={{textAlign: 'center', fontWeight: 'bold'}}>{rank}</td><td style={{textAlign: 'center', fontFamily: 'monospace', fontSize: '11pt', fontWeight: 'bold'}}>{p.number}</td><td style={{fontWeight: 'bold', fontSize: '10pt'}}>{p.name}</td>{cols.map((col, i) => (<td key={i} style={{textAlign: 'center', fontWeight: 'bold'}}>{col.getValue(p).toFixed(2)}</td>))}<td style={{textAlign: 'right', fontWeight: 'black', backgroundColor: '#f1f5f9', fontSize: '11pt'}}>{getScoreFn(p).toFixed(2)}</td></tr> ); })}</tbody></table></div> );
+            };
+
+            return ( <div style={{display: 'flex', flexDirection: 'column', height: '100%'}}><div className="flex items-center justify-between border-b-[4px] border-slate-900 pb-6 mb-10"><div><h2 className="text-[10pt] font-bold uppercase tracking-[0.3em] text-slate-400 mb-1">{settings.organizerName}</h2><h1 className="text-[28pt] font-black uppercase mb-1 text-slate-900 leading-tight">{event.name}</h1><p className="text-[10pt] font-bold text-slate-500 uppercase tracking-widest">{event.location} • {event.date}</p></div>{event.logo && <img src={event.logo} className="h-24 w-auto object-contain" />}</div><div className="mb-10 text-center"><h2 className="text-[18pt] font-black uppercase tracking-tight decoration-[4px] decoration-indigo-600 underline underline-offset-[12px]">{title || 'HASIL REKAPITULASI'}</h2></div>{type === 'overall' && (() => { const cols = event.categories.map(c => ({ label: c.name, getValue: (p) => getCategoryTotal(p, c) })); return renderTable(event.participants, 'overall', (p) => getCustomTotal(p, event.categories), cols, "DAFTAR JUARA UMUM"); })()}{type === 'category' && (() => { const cat = event.categories.find(c => c.id === categoryId); if (!cat) return null; return renderTable(event.participants, cat.id, (p) => getCategoryTotal(p, cat), [], `KLASEMEN: ${cat.name}`); })()}{type === 'full_report' && (() => { const overallCols = event.categories.map(c => ({ label: c.name, getValue: (p) => getCategoryTotal(p, c) })); return ( <div>{renderTable(event.participants, 'overall', (p) => getCustomTotal(p, event.categories), overallCols, "REKAPITULASI JUARA UMUM")}{event.categories.map(cat => (<div key={cat.id}>{renderTable(event.participants, cat.id, (p) => getCategoryTotal(p, cat), [], `KLASEMEN CABANG: ${cat.name}`)}</div>))}</div> ); })()}</div> );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
