@@ -244,8 +244,8 @@
             const inputRef = useRef(null);
             useEffect(() => { if (isOpen) { setVal(defaultValue); setTimeout(() => { if (inputRef.current) inputRef.current.focus(); }, 50); } }, [isOpen, defaultValue]);
             
-            // Auto detect password type based on title content (e.g. "Password")
-            const isPassword = title ? title.toLowerCase().includes("password") : false;
+            // Auto detect password type based on title content (e.g. "Password", "PIN")
+            const isPassword = title ? (title.toLowerCase().includes("password") || title.toLowerCase().includes("pin")) : false;
             
             if(!isOpen) return null;
             return ( <ModalWrapper isOpen={isOpen} onClose={onCancel}> <div className="p-8"> <div className="flex justify-between items-center mb-6"> <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">{title}</h3> <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 transition-colors"><Icons.X size={20}/></button> </div> {type === 'confirm' ? ( <p className="text-slate-600 mb-8 text-lg leading-relaxed">{message}</p> ) : ( <div className="mb-8"> <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Input Data</label> <input ref={inputRef} type={isPassword ? "password" : "text"} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium text-slate-800" placeholder={placeholder} value={val} onChange={e=>setVal(e.target.value)} onKeyDown={e => e.key === 'Enter' && onConfirm(val)} /> </div> )} <div className="flex justify-end gap-3"> <button onClick={onCancel} className="px-6 py-3 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-all">Batal</button> <button onClick={() => onConfirm(type==='input'?val:true)} className={`px-8 py-3 rounded-xl shadow-lg transition-all font-bold text-white ${type === 'confirm' ? 'bg-red-500 hover:bg-red-600 shadow-red-100' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'}`}> {type === 'confirm' ? 'Hapus' : 'Lanjutkan'} </button> </div> </div> </ModalWrapper> );
@@ -476,61 +476,182 @@
         const RecapView = ({ events, saveEvent, modal }) => {
             const [evtId, setEvtId] = useState(events[0]?.id || '');
             const [selectedPid, setSelectedPid] = useState(null);
+            // State untuk menyimpan ID kategori yang sedang terbuka (expanded)
+            const [expandedCats, setExpandedCats] = useState({});
+
             const evt = events.find(e => e.id === evtId);
             
             const addP = () => { modal("Registrasi Peserta", "input", num => { if(num && !evt.participants.some(p=>p.number===num)) { modal("Nama Peserta", "input", name => { if(name) saveEvent({...evt, participants: [...evt.participants, { id: generateId(), number: num, name, scores: {} }]}); }, null, "Contoh: Regu Elang") } else alert("Nomor tidak valid"); }, null, "Contoh: 001") };
             
             const handleScore = (pid, catId, aspId, jIdx, val, maxScore) => { 
-                // Jika kosong, set ke kosong (jangan 0 agar user bisa hapus)
                 if (val === '') {
                     const newPs = evt.participants.map(p => { if(p.id === pid) { const s = {...p.scores}; if(!s[catId]) s[catId] = {}; if(!s[catId][aspId]) s[catId][aspId] = {}; s[catId][aspId][jIdx] = ''; return {...p, scores: s}; } return p; }); 
                     saveEvent({...evt, participants: newPs});
                     return;
                 }
-
                 const numVal = parseFloat(val);
                 let finalVal = val;
-
-                if (!isNaN(numVal) && numVal > maxScore) { 
-                    alert(`Skor maksimal adalah ${maxScore}!`); 
-                    finalVal = 0; 
-                }
-                
+                if (!isNaN(numVal) && numVal > maxScore) { alert(`Skor maksimal adalah ${maxScore}!`); finalVal = 0; }
                 const newPs = evt.participants.map(p => { if(p.id === pid) { const s = {...p.scores}; if(!s[catId]) s[catId] = {}; if(!s[catId][aspId]) s[catId][aspId] = {}; s[catId][aspId][jIdx] = parseFloat(finalVal) || 0; return {...p, scores: s}; } return p; }); 
                 saveEvent({...evt, participants: newPs}); 
             };
             
             const handleKeyDown = (e, catId, aspId, jIdx, currentCatIndex, currentAspIndex, aspects) => { 
-                // Prevent invalid chars for number input
-                if (['e', 'E', '+', '-'].includes(e.key)) {
-                    e.preventDefault();
-                }
-                
+                if (['e', 'E', '+', '-'].includes(e.key)) { e.preventDefault(); }
                 if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') { 
-                    e.preventDefault(); let nextAspIndex = currentAspIndex; if (e.key === 'ArrowDown' || e.key === 'Enter') { nextAspIndex = currentAspIndex + 1; } else if (e.key === 'ArrowUp') { nextAspIndex = currentAspIndex - 1; } if (nextAspIndex >= 0 && nextAspIndex < aspects.length) { const nextAsp = aspects[nextAspIndex]; const nextId = `input-${catId}-${nextAsp.id}-${jIdx}`; const el = document.getElementById(nextId); if (el) el.focus(); } 
+                    e.preventDefault(); let nextAspIndex = currentAspIndex; if (e.key === 'ArrowDown' || e.key === 'Enter') { nextAspIndex = currentAspIndex + 1; } else if (e.key === 'ArrowUp') { nextAspIndex = currentAspIndex - 1; } 
+                    if (nextAspIndex >= 0 && nextAspIndex < aspects.length) { const nextAsp = aspects[nextAspIndex]; const nextId = `input-${catId}-${nextAsp.id}-${jIdx}`; const el = document.getElementById(nextId); if (el) el.focus(); } 
                 } 
             };
 
             const handleToggleLock = (catId, currentStatus) => { 
                 if (currentStatus) { 
-                    modal("Masukkan Password Otorisasi", "input", (password) => { 
-                        if(password === "0716307164") { 
-                            // Pastikan hanya kategori dengan ID yang cocok yang diubah
-                            const newCats = evt.categories.map(c => c.id === catId ? {...c, locked: false} : c); 
-                            saveEvent({...evt, categories: newCats}); 
-                        } else { alert("PIN Salah."); } 
-                    }, null, "Masukkan Password..."); 
-                } else { 
-                    const newCats = evt.categories.map(c => c.id === catId ? {...c, locked: true} : c); 
-                    saveEvent({...evt, categories: newCats}); 
-                } 
+                    modal("Masukkan PIN Otorisasi", "input", (password) => { 
+                        if(password === "0716307164") { const newCats = evt.categories.map(c => c.id === catId ? {...c, locked: false} : c); saveEvent({...evt, categories: newCats}); } else { alert("PIN Salah."); } 
+                    }, null, "Masukkan PIN..."); 
+                } else { const newCats = evt.categories.map(c => c.id === catId ? {...c, locked: true} : c); saveEvent({...evt, categories: newCats}); } 
+            };
+
+            // Fungsi Toggle Accordion
+            const toggleCat = (catId) => {
+                setExpandedCats(prev => ({ ...prev, [catId]: !prev[catId] }));
+            };
+
+            // Fungsi Hitung Persentase Pengisian
+            const getCompletion = (p, cat) => {
+                let totalSlots = 0;
+                let filledSlots = 0;
+                cat.aspects.forEach(asp => {
+                    for(let i=1; i<=cat.judgeCount; i++) {
+                        totalSlots++;
+                        const val = p.scores?.[cat.id]?.[asp.id]?.[i];
+                        if (val !== undefined && val !== '' && val !== null) {
+                            filledSlots++;
+                        }
+                    }
+                });
+                return totalSlots === 0 ? 0 : Math.round((filledSlots / totalSlots) * 100);
             };
 
             if(!evt) return <div className="text-center p-20 glass-card rounded-[40px] text-slate-300 font-bold uppercase tracking-widest border border-slate-100">Buat event di menu Struktur.</div>;
+            
             if(selectedPid) {
                 const p = evt.participants.find(x => x.id === selectedPid);
                 return (
-                    <div className="animate-fade-in pb-20"><div className="sticky top-0 bg-white/90 backdrop-blur-md z-30 py-3 mb-6 border-b border-slate-200 flex justify-between items-center -mx-10 px-10 shadow-sm transition-all"><div className="flex items-center gap-4"><button onClick={()=>setSelectedPid(null)} className="p-2 hover:bg-slate-100 rounded-lg transition-all border border-slate-200 text-slate-500 hover:text-indigo-600"><Icons.Back size={18}/></button><div><h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">{p.name}</h2><p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mt-1 bg-indigo-50 px-2 py-0.5 rounded w-fit">No. {p.number}</p></div></div><div className="text-right"><p className="text-[9px] text-slate-400 uppercase font-bold tracking-widest">Total Skor</p><p className="text-3xl font-black text-indigo-600 leading-none">{getCustomTotal(p, evt.categories).toFixed(2)}</p></div></div><div className="space-y-4 max-w-6xl mx-auto">{evt.categories.map((cat, catIdx) => (<div key={cat.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"><div className={`px-4 py-2 border-b flex justify-between items-center ${cat.locked ? 'bg-red-50/50' : 'bg-slate-50/50'}`}><div className="flex items-center gap-2"><h3 className="font-bold text-sm text-slate-700 uppercase tracking-wide">{cat.name}</h3><button onClick={() => handleToggleLock(cat.id, cat.locked)} className={`p-1 rounded-md transition-all ${cat.locked ? 'bg-red-500 text-white' : 'bg-white text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-200'}`} title={cat.locked ? "Klik untuk Unlock" : "Kunci Nilai"}>{cat.locked ? <Icons.Lock size={12}/> : <Icons.Unlock size={12}/>}</button></div><div className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase ${cat.locked ? 'bg-red-100 text-red-600' : 'bg-indigo-600 text-white'}`}>Subtotal: {getCategoryTotal(p, cat).toFixed(2)}</div></div><table className="w-full text-left"><thead><tr className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/30"><th className="px-4 py-2 w-1/3">Kriteria</th>{Array.from({length:cat.judgeCount}).map((_,i)=><th key={i} className="px-2 py-2 text-center">Juri {i+1}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{cat.aspects.map((asp, aspIdx) => (<tr key={asp.id} className="hover:bg-slate-50/50 transition-colors"><td className="px-4 py-1.5 align-middle"><div className="font-bold text-slate-700 text-xs leading-tight">{asp.name}</div><div className="text-[9px] text-slate-400 font-medium mt-0.5">Max: {asp.maxScore}</div></td>{Array.from({length:cat.judgeCount}).map((_,i) => (<td key={i} className="px-2 py-1.5 text-center"><input type="number" id={`input-${cat.id}-${asp.id}-${i+1}`} className={`w-16 p-1.5 text-center rounded-lg font-bold text-sm outline-none transition-all ${cat.locked ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-transparent' : 'bg-white border border-slate-200 focus:border-indigo-500 focus:ring-2 ring-indigo-500/10 shadow-sm focus:shadow-md'}`} value={p.scores?.[cat.id]?.[asp.id]?.[i+1] ?? ''} onChange={e => handleScore(p.id, cat.id, asp.id, i+1, e.target.value, asp.maxScore)} onKeyDown={(e) => handleKeyDown(e, cat.id, asp.id, i+1, catIdx, aspIdx, cat.aspects)} onFocus={(e) => e.target.select()} onWheel={(e) => e.target.blur()} placeholder="0" disabled={cat.locked} /></td>))}</tr>))}</tbody></table></div>))}</div></div>
+                    <div className="animate-fade-in pb-20">
+                        {/* Header Peserta */}
+                        <div className="sticky top-0 bg-white/90 backdrop-blur-md z-30 py-3 mb-6 border-b border-slate-200 flex justify-between items-center -mx-10 px-10 shadow-sm transition-all">
+                            <div className="flex items-center gap-4">
+                                <button onClick={()=>setSelectedPid(null)} className="p-2 hover:bg-slate-100 rounded-lg transition-all border border-slate-200 text-slate-500 hover:text-indigo-600"><Icons.Back size={18}/></button>
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">{p.name}</h2>
+                                    <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mt-1 bg-indigo-50 px-2 py-0.5 rounded w-fit">No. {p.number}</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[9px] text-slate-400 uppercase font-bold tracking-widest">Total Skor</p>
+                                <p className="text-3xl font-black text-indigo-600 leading-none">{getCustomTotal(p, evt.categories).toFixed(2)}</p>
+                            </div>
+                        </div>
+                        
+                        {/* List Mata Lomba (Accordion) */}
+                        <div className="space-y-4 max-w-6xl mx-auto">
+                            {evt.categories.map((cat, catIdx) => {
+                                const isExpanded = expandedCats[cat.id];
+                                const completion = getCompletion(p, cat);
+                                
+                                return (
+                                    <div key={cat.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300">
+                                        {/* Header Accordion - Klik untuk Buka/Tutup */}
+                                        <div 
+                                            onClick={() => toggleCat(cat.id)}
+                                            className={`px-4 py-3 border-b flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors ${cat.locked ? 'bg-red-50/30' : 'bg-white'}`}
+                                        >
+                                            <div className="flex items-center gap-4 flex-1">
+                                                {/* Icon Panah Indikator */}
+                                                <div className={`p-1.5 rounded-full bg-slate-100 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-indigo-50 text-indigo-500' : ''}`}>
+                                                    <Icons.ArrowDown size={14}/>
+                                                </div>
+                                                
+                                                <div className="flex flex-col gap-1 w-full max-w-md">
+                                                    <h3 className="font-bold text-sm text-slate-700 uppercase tracking-wide flex items-center gap-2">
+                                                        {cat.name}
+                                                        {cat.locked && <Icons.Lock size={12} className="text-red-400"/>}
+                                                    </h3>
+                                                    
+                                                    {/* Progress Bar & Status */}
+                                                    <div className="flex items-center gap-3 w-full">
+                                                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                            <div 
+                                                                className={`h-full rounded-full transition-all duration-500 ${completion === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
+                                                                style={{width: `${completion}%`}}
+                                                            ></div>
+                                                        </div>
+                                                        <span className={`text-[9px] font-bold ${completion === 100 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                            {completion}% Terisi
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Kontrol Kanan (Lock & Subtotal) - stopPropagation agar tidak menutup accordion */}
+                                            <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+                                                <button 
+                                                    onClick={() => handleToggleLock(cat.id, cat.locked)} 
+                                                    className={`p-1.5 rounded-lg transition-all ${cat.locked ? 'bg-red-500 text-white shadow-red-200 shadow-md' : 'bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200'}`} 
+                                                    title={cat.locked ? "Buka Kunci" : "Kunci Nilai"}
+                                                >
+                                                    {cat.locked ? <Icons.Lock size={14}/> : <Icons.Unlock size={14}/>}
+                                                </button>
+                                                <div className={`px-4 py-1.5 rounded-xl text-xs font-black tracking-widest uppercase min-w-[80px] text-center ${cat.locked ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
+                                                    {getCategoryTotal(p, cat).toFixed(2)}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Isi Input Nilai (Hanya muncul jika expanded) */}
+                                        {isExpanded && (
+                                            <div className="animate-fade-in bg-slate-50/30">
+                                                <table className="w-full text-left">
+                                                    <thead>
+                                                        <tr className="text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                                            <th className="px-6 py-3 w-1/3">Aspek Penilaian</th>
+                                                            {Array.from({length:cat.judgeCount}).map((_,i)=><th key={i} className="px-2 py-3 text-center">Juri {i+1}</th>)}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {cat.aspects.map((asp, aspIdx) => (
+                                                            <tr key={asp.id} className="hover:bg-white transition-colors">
+                                                                <td className="px-6 py-2 align-middle">
+                                                                    <div className="font-bold text-slate-700 text-xs leading-tight">{asp.name}</div>
+                                                                    <div className="text-[9px] text-slate-400 font-medium mt-0.5 bg-white border border-slate-200 px-1.5 py-0.5 rounded w-fit">Max: {asp.maxScore}</div>
+                                                                </td>
+                                                                {Array.from({length:cat.judgeCount}).map((_,i) => (
+                                                                    <td key={i} className="px-2 py-2 text-center">
+                                                                        <input 
+                                                                            type="number" id={`input-${cat.id}-${asp.id}-${i+1}`} 
+                                                                            className={`w-16 p-2 text-center rounded-lg font-bold text-sm outline-none transition-all ${cat.locked ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-transparent' : 'bg-white border border-slate-200 focus:border-indigo-500 focus:ring-2 ring-indigo-500/10 shadow-sm focus:shadow-md'}`} 
+                                                                            value={p.scores?.[cat.id]?.[asp.id]?.[i+1] ?? ''} 
+                                                                            onChange={e => handleScore(p.id, cat.id, asp.id, i+1, e.target.value, asp.maxScore)} 
+                                                                            onKeyDown={(e) => handleKeyDown(e, cat.id, asp.id, i+1, catIdx, aspIdx, cat.aspects)} 
+                                                                            onFocus={(e) => e.target.select()} 
+                                                                            onWheel={(e) => e.target.blur()} 
+                                                                            placeholder="-" 
+                                                                            disabled={cat.locked} 
+                                                                        />
+                                                                    </td>
+                                                                ))}
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 );
             }
             return (
@@ -568,10 +689,10 @@
             const updateWinnerCount = (sectionId, count) => { const currentConfigs = evt.reportConfigs || {}; saveEvent({ ...evt, reportConfigs: { ...currentConfigs, [sectionId]: parseInt(count) || 0 } }); };
             const getWinnerCount = (sectionId) => evt.reportConfigs?.[sectionId] ?? 3;
             const doDownload = (type, idOrConfig, title) => { const data = { event: evt, type, title }; if (type === 'category') data.categoryId = idOrConfig; if (type === 'custom') { data.selectedCats = idOrConfig.categoryIds; data.title = idOrConfig.name; } if (type === 'overall') data.selectedCats = evt.categories.map(c=>c.id); if (type === 'full_report') data.selectedCats = evt.categories.map(c=>c.id); download(data, `${title.replace(/\s+/g, '_')}_${evt.name.replace(/\s+/g, '_')}`); };
-            const TableHeaderConfig = ({ sectionId, title, onDownload }) => ( <div className="px-6 py-4 bg-slate-900 text-white font-black flex flex-col md:flex-row items-center justify-between gap-4 uppercase tracking-widest text-[10px]"> <div className="flex items-center gap-3"><Icons.Trophy size={16} className="text-yellow-400"/> {title}</div> <div className="flex items-center gap-4"> <div className="flex items-center bg-white/10 px-3 py-1.5 rounded-lg border border-white/5"> <span className="mr-2 text-white/50">Highlight Juara:</span> <input type="number" min="0" className="w-10 bg-transparent text-white font-black outline-none border-b border-white/30 focus:border-indigo-400 text-center" value={getWinnerCount(sectionId)} onChange={e => updateWinnerCount(sectionId, e.target.value)} /> </div> <button onClick={onDownload} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all flex items-center gap-1.5"><Icons.Download size={12}/> PDF</button> </div> </div> );
+            const TableHeaderConfig = ({ sectionId, title, onDownload }) => ( <div className="px-6 py-4 bg-slate-900 text-white font-black flex flex-col md:flex-row items-center justify-between gap-4 uppercase tracking-widest text-[10px]"> <div className="flex items-center gap-3"><Icons.Trophy size={16} className="text-yellow-400"/> {title}</div> <div className="flex items-center gap-4"> <div className="flex items-center bg-white/10 px-3 py-1.5 rounded-lg border border-white/5"> <span className="mr-2 text-white/50">Highlight Juara:</span> <input type="number" min="0" className="w-10 bg-transparent text-white font-black outline-none border-b border-white/30 focus:border-indigo-400 text-center" value={getWinnerCount(sectionId)} onChange={e => updateWinnerCount(sectionId, e.target.value)} onFocus={(e) => e.target.select()} /> </div> <button onClick={onDownload} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all flex items-center gap-1.5"><Icons.Download size={12}/> PDF</button> </div> </div> );
             const renderParticipantsTable = (participants, sectionId, getScoreFn, columns = []) => { const sorted = getSortedParticipants(participants, sectionId, getScoreFn); const winnerCount = getWinnerCount(sectionId); return ( <div className="overflow-x-auto"> <table className="w-full text-sm text-left"> <thead className="bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest"> <tr> <th className="px-3 py-2 w-12 text-center">Rank</th> <th className="px-3 py-2">Peserta</th> {columns.map((c, idx) => <th key={idx} className="px-2 py-2 text-center">{c.name}</th>)} <th className="px-3 py-2 text-right">Skor Akhir</th> </tr> </thead> <tbody className="divide-y divide-slate-50"> {sorted.map((p, i) => { const score = getScoreFn(p); const nextP = i < sorted.length - 1 ? sorted[i+1] : null; const prevP = i > 0 ? sorted[i-1] : null; const nextScore = nextP ? getScoreFn(nextP) : -1; const prevScore = prevP ? getScoreFn(prevP) : -1; const isTieWithNext = nextP && Math.abs(score - nextScore) < 0.0001; const isTieWithPrev = prevP && Math.abs(score - prevScore) < 0.0001; const hasTie = isTieWithNext || isTieWithPrev; const rankClass = (i < winnerCount) ? (RANK_PALETTE[i] || 'bg-slate-50 border-slate-100') : ''; return ( <tr key={p.id} className={`${rankClass} transition-colors border-l-4 ${i < winnerCount ? 'border-l-indigo-500' : 'border-l-transparent'}`}> <td className="px-3 py-2 text-center font-black text-slate-400 text-xs">{i+1}</td> <td className="px-3 py-2 font-black text-slate-800 tracking-tight text-xs"> {p.name} <span className="font-bold text-slate-300 text-[8px] ml-1 tracking-widest uppercase">#{p.number}</span> </td> {columns.map((col, idx) => ( <td key={idx} className="px-2 py-2 text-center font-bold text-slate-500 text-xs">{col.val(p).toFixed(2)}</td> ))} <td className="px-3 py-2 text-right"> <div className="flex items-center justify-end gap-2"> {hasTie && ( <div className="flex flex-col gap-0.5 opacity-60 hover:opacity-100 transition-opacity"> <button onClick={() => handleTieBreak(sectionId, p.id, 'up', getScoreFn)} disabled={!isTieWithPrev} className={`p-0.5 ${!isTieWithPrev ? 'text-slate-200 cursor-default' : 'hover:text-indigo-600 cursor-pointer'}`} > <Icons.ArrowUp size={10}/> </button> <button onClick={() => handleTieBreak(sectionId, p.id, 'down', getScoreFn)} disabled={!isTieWithNext} className={`p-0.5 ${!isTieWithNext ? 'text-slate-200 cursor-default' : 'hover:text-indigo-600 cursor-pointer'}`} > <Icons.ArrowDown size={10}/> </button> </div> )} <span className="font-black text-indigo-600 text-sm">{score.toFixed(2)}</span> </div> </td> </tr> ); })} </tbody> </table> </div> ); };
 
-            return ( <div className="animate-fade-in max-w-6xl mx-auto pb-20"><ModalWrapper isOpen={customModalOpen} onClose={()=>setCustomModalOpen(false)}><div className="p-8 text-sm"><div className="flex justify-between items-center mb-8"><h3 className="text-xl font-black text-slate-900 tracking-tight">Kategori Gabungan</h3><button onClick={()=>setCustomModalOpen(false)}><Icons.X size={20}/></button></div><div className="space-y-6"><div><label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Label Laporan</label><input className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium" placeholder="Contoh: Juara Gabungan PBB..." value={customConfig.title} onChange={e => setCustomConfig({...customConfig, title: e.target.value})}/></div><div><p className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Mata Lomba Sumber:</p><div className="flex flex-wrap gap-2">{evt.categories.map(c => (<label key={c.id} className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 cursor-pointer select-none transition-all ${customConfig.selectedCats.includes(c.id) ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-100 hover:border-slate-200 text-slate-500'}`}><input type="checkbox" className="hidden" checked={customConfig.selectedCats.includes(c.id)} onChange={()=>{if(customConfig.selectedCats.includes(c.id)) setCustomConfig(p => ({...p, selectedCats: p.selectedCats.filter(x => x !== c.id)})); else setCustomConfig(p => ({...p, selectedCats: [...p.selectedCats, c.id]}));}}/><span className="text-[9px] font-black uppercase tracking-widest">{c.name}</span>{customConfig.selectedCats.includes(c.id) && <Icons.Check size={10}/>}</label>))}</div></div></div><div className="mt-8 flex justify-end gap-3"><button onClick={()=>setCustomModalOpen(false)} className="px-6 py-2.5 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-all">Batal</button><button onClick={handleSaveCustomReport} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg hover:bg-indigo-700 font-bold transition-all">Simpan</button></div></div></ModalWrapper><div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 mb-10 sticky top-0 z-20"><div className="flex flex-col md:flex-row justify-between items-center gap-6"><div className="flex-1 w-full"><h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Event Data</h2><select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-slate-800 text-sm outline-none transition-all" value={evtId} onChange={e=>setEvtId(e.target.value)}>{events.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></div><div className="flex gap-2"><button onClick={()=>setCustomModalOpen(true)} className="px-4 py-3 bg-white border-2 border-slate-200 text-slate-600 rounded-xl font-black text-[10px] tracking-widest uppercase hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-2"><Icons.Merge size={14}/> Gabungkan Mata Lomba</button><button onClick={()=>doDownload('full_report', null, 'Rekap_Lengkap')} className="px-5 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] tracking-widest uppercase shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center gap-2"><Icons.Download size={14}/> Unduh Semua Laporan</button></div></div></div><div className="space-y-12"><div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden"><TableHeaderConfig sectionId="overall" title="Klasemen Juara Umum" onDownload={() => doDownload('overall', null, 'Juara_Umum')} />{renderParticipantsTable(evt.participants, 'overall', (p) => getCustomTotal(p, evt.categories), evt.categories.map(c => ({ name: c.name, val: (p) => getCategoryTotal(p, c) })))}</div><div className="grid grid-cols-1 lg:grid-cols-2 gap-8">{evt.categories.map(cat => (<div key={cat.id} className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden"><div className="px-5 py-4 bg-slate-50 text-slate-800 font-black border-b border-slate-100 flex items-center justify-between text-[9px] uppercase tracking-widest"><div className="flex items-center gap-4"><span>Mata Lomba: {cat.name}</span><div className="flex items-center bg-white border px-2 py-1 rounded"><span className="mr-1 text-slate-400">Juara:</span><input type="number" className="w-8 bg-transparent text-indigo-600 font-black outline-none" value={getWinnerCount(cat.id)} onChange={e => updateWinnerCount(cat.id, e.target.value)} /></div></div><button onClick={() => doDownload('category', cat.id, cat.name)} className="p-1.5 hover:text-indigo-600 transition-colors"><Icons.Download size={14}/></button></div>{renderParticipantsTable(evt.participants, cat.id, (p) => getCategoryTotal(p, cat))}</div>))}</div>{evt.custom_reports && evt.custom_reports.map(cr => { const cats = evt.categories.filter(c => cr.categoryIds.includes(c.id)); return ( <div key={cr.id} className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden"> <TableHeaderConfig sectionId={cr.id} title={`${cr.name} (Gabungan)`} onDownload={() => doDownload('custom', cr, cr.name)} /> {renderParticipantsTable(evt.participants, cr.id, (p) => getCustomTotal(p, cats), cats.map(c => ({ name: c.name, val: (p) => getCategoryTotal(p, c) })))} </div> ); })}</div></div> );
+            return ( <div className="animate-fade-in max-w-6xl mx-auto pb-20"><ModalWrapper isOpen={customModalOpen} onClose={()=>setCustomModalOpen(false)}><div className="p-8 text-sm"><div className="flex justify-between items-center mb-8"><h3 className="text-xl font-black text-slate-900 tracking-tight">Kategori Gabungan</h3><button onClick={()=>setCustomModalOpen(false)}><Icons.X size={20}/></button></div><div className="space-y-6"><div><label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Label Laporan</label><input className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium" placeholder="Contoh: Juara Gabungan PBB..." value={customConfig.title} onChange={e => setCustomConfig({...customConfig, title: e.target.value})}/></div><div><p className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Mata Lomba Sumber:</p><div className="flex flex-wrap gap-2">{evt.categories.map(c => (<label key={c.id} className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 cursor-pointer select-none transition-all ${customConfig.selectedCats.includes(c.id) ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-100 hover:border-slate-200 text-slate-500'}`}><input type="checkbox" className="hidden" checked={customConfig.selectedCats.includes(c.id)} onChange={()=>{if(customConfig.selectedCats.includes(c.id)) setCustomConfig(p => ({...p, selectedCats: p.selectedCats.filter(x => x !== c.id)})); else setCustomConfig(p => ({...p, selectedCats: [...p.selectedCats, c.id]}));}}/><span className="text-[9px] font-black uppercase tracking-widest">{c.name}</span>{customConfig.selectedCats.includes(c.id) && <Icons.Check size={10}/>}</label>))}</div></div></div><div className="mt-8 flex justify-end gap-3"><button onClick={()=>setCustomModalOpen(false)} className="px-6 py-2.5 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-all">Batal</button><button onClick={handleSaveCustomReport} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg hover:bg-indigo-700 font-bold transition-all">Simpan</button></div></div></ModalWrapper><div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 mb-10 sticky top-0 z-20"><div className="flex flex-col md:flex-row justify-between items-center gap-6"><div className="flex-1 w-full"><h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Event Data</h2><select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-slate-800 text-sm outline-none transition-all" value={evtId} onChange={e=>setEvtId(e.target.value)}>{events.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></div><div className="flex gap-2"><button onClick={()=>setCustomModalOpen(true)} className="px-4 py-3 bg-white border-2 border-slate-200 text-slate-600 rounded-xl font-black text-[10px] tracking-widest uppercase hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-2"><Icons.Merge size={14}/> Gabungkan Mata Lomba</button><button onClick={()=>doDownload('full_report', null, 'Rekap_Lengkap')} className="px-5 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] tracking-widest uppercase shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center gap-2"><Icons.Download size={14}/> Unduh Semua Laporan</button></div></div></div><div className="space-y-12"><div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden"><TableHeaderConfig sectionId="overall" title="Klasemen Juara Umum" onDownload={() => doDownload('overall', null, 'Juara_Umum')} />{renderParticipantsTable(evt.participants, 'overall', (p) => getCustomTotal(p, evt.categories), evt.categories.map(c => ({ name: c.name, val: (p) => getCategoryTotal(p, c) })))}</div><div className="grid grid-cols-1 lg:grid-cols-2 gap-8">{evt.categories.map(cat => (<div key={cat.id} className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden"><div className="px-5 py-4 bg-slate-50 text-slate-800 font-black border-b border-slate-100 flex items-center justify-between text-[9px] uppercase tracking-widest"><div className="flex items-center gap-4"><span>Mata Lomba: {cat.name}</span><div className="flex items-center bg-white border px-2 py-1 rounded"><span className="mr-1 text-slate-400">Juara:</span><input type="number" className="w-8 bg-transparent text-indigo-600 font-black outline-none" value={getWinnerCount(cat.id)} onChange={e => updateWinnerCount(cat.id, e.target.value)} onFocus={(e) => e.target.select()} /></div></div><button onClick={() => doDownload('category', cat.id, cat.name)} className="p-1.5 hover:text-indigo-600 transition-colors"><Icons.Download size={14}/></button></div>{renderParticipantsTable(evt.participants, cat.id, (p) => getCategoryTotal(p, cat))}</div>))}</div>{evt.custom_reports && evt.custom_reports.map(cr => { const cats = evt.categories.filter(c => cr.categoryIds.includes(c.id)); return ( <div key={cr.id} className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden"> <TableHeaderConfig sectionId={cr.id} title={`${cr.name} (Gabungan)`} onDownload={() => doDownload('custom', cr, cr.name)} /> {renderParticipantsTable(evt.participants, cr.id, (p) => getCustomTotal(p, cats), cats.map(c => ({ name: c.name, val: (p) => getCategoryTotal(p, c) })))} </div> ); })}</div></div> );
         };
 
         const AppSettings = ({ settings, saveSettings, events, saveEvent, modal }) => {
