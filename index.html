@@ -216,13 +216,10 @@
         };
 
         // --- COMPONENTS ---
-        const ModalWrapper = ({ children, onClose }) => (
-            <div className="fixed inset-0 z-[100] modal-overlay overflow-y-auto grid place-items-center p-4" onClick={onClose}>
-                <div className="relative bg-white w-full max-w-lg rounded-[24px] shadow-2xl animate-fade-in my-8 overflow-hidden" onClick={e => e.stopPropagation()}>
-                    {children}
-                </div>
-            </div>
-        );
+        const ModalWrapper = ({ children, isOpen, onClose }) => {
+            if (!isOpen) return null;
+            return ( <div className="fixed inset-0 z-[100] modal-overlay overflow-y-auto grid place-items-center p-4" onClick={onClose}> <div className="relative bg-white w-full max-w-lg rounded-[24px] shadow-2xl animate-fade-in my-8 overflow-hidden" onClick={e => e.stopPropagation()}> {children} </div> </div> );
+        };
         
         const SimpleModal = ({ isOpen, title, type = 'input', message, onConfirm, onCancel, placeholder, defaultValue = '', confirmBtnText }) => {
             const [val, setVal] = useState('');
